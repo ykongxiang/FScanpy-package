@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "FScanpy"
+version = "1.0.0"
+description = "PRF prediction tool"
+authors = [{name = "FScanpy Developer", email = "example@example.com"}]
+dependencies = [
+    "numpy>=2.3",
+    "pandas>=2.3",
+    "scikit-learn>=1.7",
+    "matplotlib>=3.10",
+    "joblib>=1.5",
+    "biopython>=1.85",
+    "torch>=2.5",
+    "openpyxl"
+]
+requires-python = ">=3.11"
+
+[tool.setuptools]
+packages = ["FScanpy", "FScanpy.features"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"FScanpy.data" = ["test_data/*"]
