@@ -6,11 +6,11 @@
 FScanpy is a Python package designed to predict Programmed Ribosomal Frameshifting (PRF) sites in DNA sequences. This package integrates machine learning models, sequence feature analysis, and visualization capabilities to help researchers rapidly locate potential PRF sites.
 
 ## Introduction
-![FScanpy structure](/image/structure.jpeg)
+![FScanpy structure](/tutorial/image/structure.jpg)
 
 FScanpy is a Python package dedicated to predicting Programmed Ribosomal Frameshifting (PRF) sites in DNA sequences. It integrates machine learning models (Gradient Boosting and BiLSTM-CNN) along with the FScanR package to furnish precise PRF predictions. Users are capable of employing three types of data as input: the entire cDNA/mRNA sequence that requires prediction, the nucleotide sequence in the vicinity of the suspected frameshift site, and the peptide library blastx results of the species or related species. It anticipates the input sequence to be in the + strand and can be integrated with FScanR to augment the accuracy.
 
-![Machine learning models](/image/ML.png)
+![Machine learning models](/tutorial//image/ML.png)
 
 For the prediction of the entire sequence, FScanpy adopts a sliding window approach to scan the entire sequence and predict the PRF sites. For regional prediction, it is based on the 33-bp and 399-bp sequences in the 0 reading frame around the suspected frameshift site. Initially, the Short model (HistGradientBoosting) will predict the potential PRF sites within the scanning window. If the predicted probability exceeds the threshold, the Long model (BiLSTM-CNN) will predict the PRF sites in the 399bp sequence. Then, ensemble weighting combines the two models to make the final prediction.
 
