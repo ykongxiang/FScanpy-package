@@ -6,11 +6,11 @@
 FScanpy 是一个专为预测 DNA 序列中程序性核糖体移码（PRF）位点而设计的 Python 包。该包集成了机器学习模型、序列特征分析和可视化功能，帮助研究人员快速定位潜在的 PRF 位点。
 
 ## 介绍
-![FScanpy 结构](/image/structure.jpeg)
+![FScanpy 结构](/tutorial/image/structure.jpg)
 
 FScanpy 是一个专门用于预测 DNA 序列中程序性核糖体移码（PRF）位点的 Python 包。它集成了机器学习模型（梯度提升和 BiLSTM-CNN）以及 FScanR 包，提供精确的 PRF 预测。用户可以使用三种类型的数据作为输入：需要预测的完整 cDNA/mRNA 序列、疑似移码位点附近的核苷酸序列，以及物种或相关物种的肽库 blastx 结果。它预期输入序列位于 + 链上，并可与 FScanR 集成以提高准确性。
 
-![机器学习模型](/image/ML.png)
+![机器学习模型](/tutorial/image/ML.png)
 
 对于整个序列的预测，FScanpy 采用滑动窗口方法扫描整个序列并预测 PRF 位点。对于区域预测，它基于疑似移码位点周围 0 读码框中的 33bp 和 399bp 序列。首先，短模型（HistGradientBoosting）将预测扫描窗口内的潜在 PRF 位点。如果预测概率超过阈值，长模型（BiLSTM-CNN）将预测 399bp 序列中的 PRF 位点。然后，集成权重结合两个模型进行最终预测。
 
