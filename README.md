@@ -195,7 +195,19 @@ final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)
 If you use FScanpy in your research, please cite:
 
 ```bibtex
+@article{yang2026deciphering,
 
+  author    = {Yang, Yu-Hao and Yang, Juan and Liu, Zi-Jia and Li, Yuan and Song, Weibo and Stover, Naomi and Chen, Xiao},
+
+  title     = {Deciphering ribosomal frameshifting determinants across species with a semi-supervised hybrid learning framework},
+
+  journal   = {Zoological Research},
+
+  doi       = {10.24272/j.issn.2095-8137.2025.648},
+
+  url       = {[https://doi.org/10.24272/j.issn.2095-8137.2025.648](https://doi.org/10.24272/j.issn.2095-8137.2025.648)}
+
+}
 ```
 
 
