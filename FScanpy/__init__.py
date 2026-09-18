@@ -5,9 +5,9 @@ import pandas as pd
 import numpy as np
 from typing import Union, List, Dict
 
-__version__ = '0.3.0'
-__author__ = ''
-__email__ = ''
+__version__ = '1.0.0'
+__author__ = 'Yang Yuhao'
+__email__ = 'ykongxiang@qq.com'
 
 __all__ = ['PRFPredictor', 'predict_prf', 'plot_prf_prediction', 'fscanr', 'extract_prf_regions', 'data', '__version__', '__author__', '__email__']
 
