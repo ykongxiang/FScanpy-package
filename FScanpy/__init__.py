@@ -1,5 +1,6 @@
 from .predictor import PRFPredictor
 from . import data
+from .utils import fscanr, extract_prf_regions
 import pandas as pd
 import numpy as np
 from typing import Union, List, Dict
@@ -8,7 +9,7 @@ __version__ = '0.3.0'
 __author__ = ''
 __email__ = ''
 
-__all__ = ['PRFPredictor', 'predict_prf', 'plot_prf_prediction', 'data', '__version__', '__author__', '__email__']
+__all__ = ['PRFPredictor', 'predict_prf', 'plot_prf_prediction', 'fscanr', 'extract_prf_regions', 'data', '__version__', '__author__', '__email__']
 
 def predict_prf(
     sequence: Union[str, List[str], None] = None,

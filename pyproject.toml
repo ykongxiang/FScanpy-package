@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,7 +10,7 @@ authors = [{name = "FScanpy Developer", email = "example@example.com"}]
 dependencies = [
     "numpy>=2.3",
     "pandas>=2.3",
-    "scikit-learn>=1.7",
+    "scikit-learn==1.7.2",
     "matplotlib>=3.10",
     "joblib>=1.5",
     "biopython>=1.85",
@@ -20,8 +20,11 @@ dependencies = [
 requires-python = ">=3.11"
 
 [tool.setuptools]
-packages = ["FScanpy", "FScanpy.features"]
 include-package-data = true
 
+[tool.setuptools.packages.find]
+include = ["FScanpy*"]
+
 [tool.setuptools.package-data]
+"FScanpy" = ["pretrained/*.pth", "pretrained/*.pkl"]
 "FScanpy.data" = ["test_data/*"]

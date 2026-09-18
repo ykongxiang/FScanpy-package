@@ -22,10 +22,23 @@ pip install FScanpy
 
 ### 从源码安装
 ```bash
-git clone https://github.com/your-org/FScanpy-package.git
+git clone https://github.com/ykongxiang/FScanpy-package.git
 cd FScanpy-package
 pip install -e .
 ```
+
+### Jupyter Notebook
+
+在下载的包目录内，使用准备运行 Jupyter 的 Python 环境安装：
+
+```bash
+python -m pip install . notebook ipykernel
+python -m ipykernel install --sys-prefix --name fscanpy --display-name "Python (FScanpy)"
+python -m notebook
+```
+
+打开 `FScanpy_Demo.ipynb` 或 `tutorial/predict_sample.ipynb`，选择 **Python (FScanpy)** 内核，重启内核后运行所有单元格。Demo 开头的 API 概览为说明文字，后面的可执行示例使用包内数据。如果在已打开的 Notebook 中安装，请使用 `%pip install /path/to/FScanpy-package`，安装后重启内核。
+
 
 ## 🚀 快速开始
 

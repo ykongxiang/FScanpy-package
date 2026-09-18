@@ -1,0 +1,4 @@
+include FScanpy_Demo.ipynb
+include README_zh.md
+recursive-include tutorial *.ipynb *.md *.png *.jpg
+recursive-include tests *.py
