@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import pickle
 import numpy as np
 import pandas as pd
@@ -21,8 +22,7 @@ class PRFPredictor:
             model_dir: 模型目录路径（可选）
         """
         if model_dir is None:
-           from pkg_resources import resource_filename
-           model_dir = resource_filename('FScanpy', 'pretrained')
+            model_dir = Path(__file__).resolve().parent / 'pretrained'
         
         try:
             # 设备
@@ -124,7 +124,7 @@ class PRFPredictor:
             sequence_length=399
         ).to(self.device)
         # 兼容在不同设备保存/加载
-        state = torch.load(checkpoint_path, map_location=self.device)
+        state = torch.load(checkpoint_path, map_location=self.device, weights_only=True)
         # 兼容 weights_only=True/False 的保存
         if isinstance(state, dict) and all(k.startswith('module.') for k in state.keys()):
             # 去掉分布式前缀
@@ -457,6 +457,7 @@ class PRFPredictor:
             
             # Save plot if save path is provided
             if save_path:
+                save_path = os.fspath(save_path)
                 plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
                 # Also save PDF version
                 if save_path.endswith('.png'):
@@ -487,7 +488,14 @@ class PRFPredictor:
                 raise ValueError("ensemble_weight must be between 0.0 and 1.0")
             
             # Unify input format
-            if isinstance(sequences, (pd.DataFrame, pd.Series)):
+            if isinstance(sequences, pd.DataFrame):
+                if 'Long_Sequence' in sequences.columns:
+                    sequences = sequences['Long_Sequence']
+                elif '399bp' in sequences.columns:
+                    sequences = sequences['399bp']
+                else:
+                    raise ValueError("DataFrame must contain 'Long_Sequence' or '399bp' column")
+            if isinstance(sequences, pd.Series):
                 sequences = sequences.tolist()
             elif isinstance(sequences, str):
                 sequences = [sequences]

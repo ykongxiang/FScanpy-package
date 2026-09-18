@@ -22,10 +22,22 @@ pip install FScanpy
 
 ### Install from Source
 ```bash
-git clone https://github.com/your-org/FScanpy-package.git
+git clone https://github.com/ykongxiang/FScanpy-package.git
 cd FScanpy-package
 pip install -e .
 ```
+
+### Jupyter Notebook
+
+From the cloned package directory, install into the Python environment you will use for Jupyter:
+
+```bash
+python -m pip install . notebook ipykernel
+python -m ipykernel install --sys-prefix --name fscanpy --display-name "Python (FScanpy)"
+python -m notebook
+```
+
+Open `FScanpy_Demo.ipynb` or `tutorial/predict_sample.ipynb`, select **Python (FScanpy)**, then restart the kernel and run all cells. The API overview in the demo is explanatory Markdown; the runnable examples use the bundled data. If installing into an already open notebook, use `%pip install /path/to/FScanpy-package` and restart the kernel.
 
 ## 🚀 Quick Start
 
