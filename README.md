@@ -2,7 +2,7 @@
 ## A Machine Learning-Based Framework for Programmed Ribosomal Frameshifting Prediction
 
 [![中文](https://img.shields.io/badge/Language-中文-red.svg)](README_zh.md)
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 FScanpy is a comprehensive Python package designed for the prediction of [Programmed Ribosomal Frameshifting (PRF)](https://en.wikipedia.org/wiki/Ribosomal_frameshift) sites in nucleotide sequences. By integrating advanced machine learning approaches (HistGradientBoosting and BiLSTM-CNN) with the established [FScanR](https://github.com/seanchen607/FScanR.git) framework, FScanpy provides robust and accurate PRF site predictions.
