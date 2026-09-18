@@ -1,13 +1,13 @@
 # FScanpy
 ## 基于机器学习的程序性核糖体移码预测框架
 
-[![English](https://img.shields.io/badge/Language-English-blue.svg)](README.md)
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![English](https://img.shields.io/badge/Language-English-blue.svg)](https://github.com/ykongxiang/FScanpy-package/blob/master/README.md)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/ykongxiang/FScanpy-package/blob/master/LICENSE)
 
 FScanpy 是一个专为预测核苷酸序列中[程序性核糖体移码 (PRF)](https://en.wikipedia.org/wiki/Ribosomal_frameshift) 位点而设计的综合性 Python 包。通过将先进的机器学习方法（HistGradientBoosting 和 BiLSTM-CNN）与已建立的 [FScanR](https://github.com/seanchen607/FScanR.git) 框架相结合，FScanpy 提供了稳健且准确的 PRF 位点预测。
 
-![FScanpy 架构](/tutorial/image/structure.jpg)
+![FScanpy 架构](https://raw.githubusercontent.com/ykongxiang/FScanpy-package/master/tutorial/image/structure.jpg)
 
 ## 🔧 安装
 
@@ -199,9 +199,9 @@ final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)
 
 ## 📚 文档
 
-- **[完整教程](tutorial/tutorial_zh.md)**：包含示例的综合使用指南
-- **[演示笔记本](FScanpy_Demo.ipynb)**：库中每个函数的实际用法以及分析流程结果演示
-- **[预测结果解释](tutorial/predict_sample.ipynb)**：FScanpy 绘图结果的详细解释和信号分析
+- **[完整教程](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/tutorial_zh.md)**：包含示例的综合使用指南
+- **[演示笔记本](https://github.com/ykongxiang/FScanpy-package/blob/master/FScanpy_Demo.ipynb)**：库中每个函数的实际用法以及分析流程结果演示
+- **[预测结果解释](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/predict_sample.ipynb)**：FScanpy 绘图结果的详细解释和信号分析
 
 ## 📝 引用
 
@@ -217,3 +217,9 @@ final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)
 ```
 
 **FScanpy** - 通过机器学习推进程序性核糖体移码研究 🧬
+
+## 维护者与许可证
+
+主要维护者：**Yang Yuhao**（[ykongxiang@qq.com](mailto:ykongxiang@qq.com)）。
+
+FScanpy 采用 [MIT 许可证](https://github.com/ykongxiang/FScanpy-package/blob/master/LICENSE)。1.0.0 版本变更见[更新记录](https://github.com/ykongxiang/FScanpy-package/blob/master/CHANGELOG.md)。

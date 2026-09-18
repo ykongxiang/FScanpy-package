@@ -1,13 +1,13 @@
 # FScanpy
 ## A Machine Learning-Based Framework for Programmed Ribosomal Frameshifting Prediction
 
-[![中文](https://img.shields.io/badge/Language-中文-red.svg)](README_zh.md)
+[![中文](https://img.shields.io/badge/Language-中文-red.svg)](https://github.com/ykongxiang/FScanpy-package/blob/master/README_zh.md)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/ykongxiang/FScanpy-package/blob/master/LICENSE)
 
 FScanpy is a comprehensive Python package designed for the prediction of [Programmed Ribosomal Frameshifting (PRF)](https://en.wikipedia.org/wiki/Ribosomal_frameshift) sites in nucleotide sequences. By integrating advanced machine learning approaches (HistGradientBoosting and BiLSTM-CNN) with the established [FScanR](https://github.com/seanchen607/FScanR.git) framework, FScanpy provides robust and accurate PRF site predictions.
 
-![FScanpy Architecture](/tutorial/image/structure.jpg)
+![FScanpy Architecture](https://raw.githubusercontent.com/ykongxiang/FScanpy-package/master/tutorial/image/structure.jpg)
 
 ## 🔧 Installation
 
@@ -198,9 +198,9 @@ final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)
 
 ## 📚 Documentation
 
-- **[Complete Tutorial](tutorial/tutorial.md)**: Comprehensive usage guide with examples
-- **[Demo Notebook](FScanpy_Demo.ipynb)**: Practical usage of each function in the library and demonstration of analysis workflow results
-- **[Predict Sample Interpretation](tutorial/predict_sample.ipynb)**: Detailed interpretation of FScanpy's plotting results and signal analysis
+- **[Complete Tutorial](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/tutorial.md)**: Comprehensive usage guide with examples
+- **[Demo Notebook](https://github.com/ykongxiang/FScanpy-package/blob/master/FScanpy_Demo.ipynb)**: Practical usage of each function in the library and demonstration of analysis workflow results
+- **[Predict Sample Interpretation](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/predict_sample.ipynb)**: Detailed interpretation of FScanpy's plotting results and signal analysis
 
 ## 📝 Citation
 
@@ -217,10 +217,16 @@ If you use FScanpy in your research, please cite:
 
   doi       = {10.24272/j.issn.2095-8137.2025.648},
 
-  url       = {[https://doi.org/10.24272/j.issn.2095-8137.2025.648](https://doi.org/10.24272/j.issn.2095-8137.2025.648)}
+  url       = {https://doi.org/10.24272/j.issn.2095-8137.2025.648}
 
 }
 ```
 
 
 **FScanpy** - Advancing programmed ribosomal frameshifting research through machine learning 🧬
+
+## Maintainer and License
+
+Primary maintainer: **Yang Yuhao** ([ykongxiang@qq.com](mailto:ykongxiang@qq.com)).
+
+FScanpy is distributed under the [MIT License](https://github.com/ykongxiang/FScanpy-package/blob/master/LICENSE). See the [changelog](https://github.com/ykongxiang/FScanpy-package/blob/master/CHANGELOG.md) for version 1.0.0 changes.
