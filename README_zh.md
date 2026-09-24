@@ -217,9 +217,3 @@ final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)
 ```
 
 **FScanpy** - 通过机器学习推进程序性核糖体移码研究 🧬
-
-## 维护者与许可证
-
-主要维护者：**Yang Yuhao**（[ykongxiang@qq.com](mailto:ykongxiang@qq.com)）。
-
-FScanpy 采用 [MIT 许可证](https://github.com/ykongxiang/FScanpy-package/blob/master/LICENSE)。1.0.0 版本变更见[更新记录](https://github.com/ykongxiang/FScanpy-package/blob/master/CHANGELOG.md)。
