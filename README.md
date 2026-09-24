@@ -224,9 +224,3 @@ If you use FScanpy in your research, please cite:
 
 
 **FScanpy** - Advancing programmed ribosomal frameshifting research through machine learning 🧬
-
-## Maintainer and License
-
-Primary maintainer: **Yang Yuhao** ([ykongxiang@qq.com](mailto:ykongxiang@qq.com)).
-
-FScanpy is distributed under the [MIT License](https://github.com/ykongxiang/FScanpy-package/blob/master/LICENSE). See the [changelog](https://github.com/ykongxiang/FScanpy-package/blob/master/CHANGELOG.md) for version 1.0.0 changes.
