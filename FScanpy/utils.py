@@ -1,75 +1,77 @@
+import math
+from numbers import Integral, Real
 import numpy as np
 import pandas as pd
 from typing import Tuple, Optional
 from Bio import SeqIO
 from Bio.Seq import Seq
 
-def fscanr(blastx_output: pd.DataFrame, 
+def fscanr(blastx_output: pd.DataFrame,
            mismatch_cutoff: float = 10,
            evalue_cutoff: float = 1e-5,
            frameDist_cutoff: float = 10) -> pd.DataFrame:
     """
     identify PRF sites from BLASTX output
-    
+
     Args:
         blastx_output: BLASTX output DataFrame
         mismatch_cutoff: mismatch threshold
-        evalue_cutoff: E-value threshold 
+        evalue_cutoff: E-value threshold
         frameDist_cutoff: frame distance threshold
-        
+
     Returns:
         pd.DataFrame: DataFrame containing PRF site information
     """
     blastx = blastx_output.copy()
-    
-    blastx.columns = ["qseqid", "sseqid", "pident", "length", "mismatch", 
-                     "gapopen", "qstart", "qend", "sstart", "send", 
+
+    blastx.columns = ["qseqid", "sseqid", "pident", "length", "mismatch",
+                     "gapopen", "qstart", "qend", "sstart", "send",
                      "evalue", "bitscore", "qframe", "sframe"]
-    
+
     blastx = blastx[
-        (blastx['evalue'] <= evalue_cutoff) & 
+        (blastx['evalue'] <= evalue_cutoff) &
         (blastx['mismatch'] <= mismatch_cutoff)
     ].dropna()
 
     freq = blastx['qseqid'].value_counts()
     multi_hits = freq[freq > 1].index
     blastx = blastx[blastx['qseqid'].isin(multi_hits)]
-    
+
     blastx = blastx.sort_values(['qseqid', 'sseqid', 'qstart'])
-    
+
     prf_list = []
     for i in range(1, len(blastx)):
         curr = blastx.iloc[i]
         prev = blastx.iloc[i-1]
-        
-        if (curr['qseqid'] == prev['qseqid'] and 
+
+        if (curr['qseqid'] == prev['qseqid'] and
             curr['sseqid'] == prev['sseqid'] and
-            curr['qframe'] != prev['qframe'] and 
+            curr['qframe'] != prev['qframe'] and
             curr['qframe'] * prev['qframe'] > 0):
-            
+
             if curr['qframe'] > 0 and prev['qframe'] > 0:
-                frame_start = prev['qend'] 
+                frame_start = prev['qend']
                 frame_end = curr['qstart']
                 pep_start = prev['send']
                 pep_end = curr['sstart']
                 strand = "+"
             elif curr['qframe'] < 0 and prev['qframe'] < 0:
                 frame_start = prev['qstart']
-                frame_end = curr['qend'] 
+                frame_end = curr['qend']
                 pep_start = curr['send']
                 pep_end = prev['sstart']
                 strand = "-"
             else:
                 continue
-                
+
             q_dist = frame_end - frame_start - 1
             s_dist = pep_end - pep_start
             fs_type = q_dist + (1 - s_dist) * 3
-            
-            if (abs(q_dist) <= frameDist_cutoff and 
+
+            if (abs(q_dist) <= frameDist_cutoff and
                 abs(s_dist) <= frameDist_cutoff // 3 and
                 -3 < fs_type < 3):
-                
+
                 prf_list.append({
                     'DNA_seqid': curr['qseqid'],
                     'FS_start': frame_start,
@@ -80,52 +82,62 @@ def fscanr(blastx_output: pd.DataFrame,
                     'FS_type': fs_type,
                     'Strand': strand
                 })
-    
+
     if not prf_list:
         print("No PRF events detected!")
         return pd.DataFrame()
-        
+
     prf = pd.DataFrame(prf_list)
-    
-    for col in ['DNA_seqid', 'Pep_seqid']:
-        for pos in ['FS_start', 'FS_end']:
-            loci = prf[col] + '_' + prf[pos].astype(str)
-            prf = prf[~loci.duplicated()]
-            
+
+    for identifier, position in [('DNA_seqid','FS_start'), ('DNA_seqid','FS_end'),
+                                 ('Pep_seqid','Pep_FS_start'), ('Pep_seqid','Pep_FS_end')]:
+        prf = prf.drop_duplicates(subset=[identifier, position])
+
     return prf
 
-def extract_prf_regions(mrna_file: str, prf_data: pd.DataFrame) -> pd.DataFrame:
+def extract_prf_regions(mrna_file: str, prf_data: pd.DataFrame, *, coordinate_base: int = 1) -> pd.DataFrame:
     """
     从mRNA序列中提取PRF位点周围的序列
-    
+
     Args:
         mrna_file: mRNA序列文件路径 (FASTA格式)
-        prf_data: FScanR输出的PRF位点数据
-        
+        prf_data: FScanR输出的PRF位点数据，默认使用BLASTX的1-based坐标
+        coordinate_base: 输入坐标基准，1（默认）或0；返回表中的原始坐标保持不变
+
     Returns:
         pd.DataFrame: 包含399bp序列的DataFrame
+
+    提取窗口前会将输入转换为编码链方向的0-based坐标，再沿用密码子对齐规则。
     """
-    mrna_dict = {rec.id: str(rec.seq) 
+    if isinstance(coordinate_base, bool) or coordinate_base not in (0, 1):
+        raise ValueError('coordinate_base must be 0 or 1')
+    mrna_dict = {rec.id: str(rec.seq)
                  for rec in SeqIO.parse(mrna_file, "fasta")}
-    
+
     results = []
     for _, row in prf_data.iterrows():
         seq_id = row['DNA_seqid']
         if seq_id not in mrna_dict:
             print(f"警告: {seq_id} 未在mRNA文件中找到")
             continue
-            
+
         sequence = mrna_dict[seq_id]
         strand = row['Strand']
         fs_start = int(row['FS_start'])
-        
+        position = fs_start - coordinate_base
+        if not 0 <= position < len(sequence):
+            raise ValueError(f'FS_start is outside sequence {seq_id}')
+        if strand not in ('+', '-'):
+            raise ValueError('Strand must be + or -')
+
         try:
             if strand == '-':
                 sequence = str(Seq(sequence).reverse_complement())
-            
+                position = len(sequence) - 1 - position
+
             # 只提取399bp序列，33bp由predictor内部截取
-            full_seq = extract_window_sequences(sequence, fs_start)[1]
-            
+            full_seq = extract_window_sequences(sequence, position)[1]
+
             results.append({
                 'DNA_seqid': seq_id,
                 'FS_start': fs_start,
@@ -134,21 +146,21 @@ def extract_prf_regions(mrna_file: str, prf_data: pd.DataFrame) -> pd.DataFrame:
                 '399bp': full_seq,
                 'FS_type': row['FS_type']
             })
-            
+
         except Exception as e:
             print(f"处理 {seq_id} 时出错: {str(e)}")
             continue
-            
+
     return pd.DataFrame(results)
 
 def extract_window_sequences(seq: str, position: int) -> Tuple[Optional[str], Optional[str]]:
     """
     从指定位置提取分析窗口序列
-    
+
     Args:
         seq: 输入DNA序列
         position: 当前分析位置 (FS_start)
-    
+
     Returns:
         Tuple[str, str]: (33bp序列, 399bp序列) - 已调整为与训练模型匹配的长度
     """
@@ -159,7 +171,7 @@ def extract_window_sequences(seq: str, position: int) -> Tuple[Optional[str], Op
     half_size_small = 33 // 2
     start_small = frame_position - half_size_small
     end_small = frame_position + half_size_small + (33 % 2)  # 添加余数以处理奇数长度
-    
+
     # 计算399bp窗口的起止位置 (CNN模型)
     half_size_large = 399 // 2
     start_large = frame_position - half_size_large
@@ -168,36 +180,33 @@ def extract_window_sequences(seq: str, position: int) -> Tuple[Optional[str], Op
     # 提取序列并填充
     seq_small = _extract_and_pad(seq, start_small, end_small, 33)
     seq_large = _extract_and_pad(seq, start_large, end_large, 399)
-    
+
     return seq_small, seq_large
 
 def _extract_and_pad(seq: str, start: int, end: int, target_length: int) -> str:
-    """提取序列并用N填充"""
-    if start < 0:
-        prefix = 'N' * abs(start)
-        extracted = prefix + seq[:end]
-    elif end > len(seq):
-        suffix = 'N' * (end - len(seq))
-        extracted = seq[start:] + suffix
-    else:
-        extracted = seq[start:end]
-    
-    # 确保序列长度正确
-    if len(extracted) < target_length:
-        # 从中心填充
-        pad_left = (target_length - len(extracted)) // 2
-        pad_right = target_length - len(extracted) - pad_left
-        extracted = 'N' * pad_left + extracted + 'N' * pad_right
-    elif len(extracted) > target_length:
-        # 从序列两端等量截取
-        excess = len(extracted) - target_length
-        trim_each_side = excess // 2
-        extracted = extracted[trim_each_side:len(extracted)-trim_each_side]
-    
-    return extracted
+    """Pad each missing flank independently, preserving the requested coordinates."""
+    if end - start != target_length:
+        raise ValueError('Window coordinates must span target_length nucleotides')
+    left = min(target_length, max(0, -start))
+    clipped_start, clipped_end = max(0, start), min(len(seq), end)
+    content = seq[clipped_start:clipped_end] if clipped_end > clipped_start else ''
+    right = target_length - left - len(content)
+    return 'N' * left + content + 'N' * right
 
 def prepare_cnn_input(sequence: str) -> np.ndarray:
     """prepare CNN model input"""
     base_to_num = {'A': 1, 'T': 2, 'G': 3, 'C': 4, 'N': 0}
     seq_numeric = [base_to_num.get(base, 0) for base in sequence.upper()]
-    return np.array(seq_numeric).reshape(1, len(sequence), 1) 
+    return np.array(seq_numeric).reshape(1, len(sequence), 1)
+
+
+def probability(value, name):
+    if isinstance(value, bool) or not isinstance(value, Real) or not math.isfinite(value) or not 0 <= value <= 1:
+        raise ValueError(f'{name} must be a finite number between 0 and 1')
+    return float(value)
+
+
+def positive_integer(value, name):
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f'{name} must be a positive integer')
+    return int(value)

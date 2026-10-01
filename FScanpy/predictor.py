@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from numbers import Integral
 import pickle
 import numpy as np
 import pandas as pd
@@ -7,7 +8,7 @@ import torch
 import torch.nn as nn
 from .features.sequence import SequenceFeatureExtractor
 from .features.cnn_input import CNNInputProcessor
-from .utils import extract_window_sequences
+from .utils import extract_window_sequences, positive_integer, probability
 import matplotlib.pyplot as plt
 import joblib
 
@@ -177,82 +178,44 @@ class PRFPredictor:
             raise Exception(f"模型预测失败: {str(e)}")
 
     def predict_single_position(self, fs_period, full_seq, short_threshold=0.1, ensemble_weight=0.4):
-        '''
-        预测单个位置的PRF状态
-        
-        Args:
-            fs_period: 33bp序列 (short模型使用)
-            full_seq: 完整序列 (long模型使用)
-            short_threshold: short模型的概率阈值 (默认为0.1)
-            ensemble_weight: short模型在集成中的权重 (默认为0.4，long权重为0.6)
-        Returns:
-            dict: 包含预测概率的字典
-        '''
+        """Predict one position; propagate model errors instead of inventing zero scores."""
+        short_threshold = probability(short_threshold, 'short_threshold')
+        ensemble_weight = probability(ensemble_weight, 'ensemble_weight')
+        long_weight = 1.0 - ensemble_weight
+        if len(fs_period) > self.short_seq_length:
+            fs_period = self.feature_extractor.trim_sequence(fs_period, self.short_seq_length)
         try:
-            # 验证权重参数
-            if not (0.0 <= ensemble_weight <= 1.0):
-                raise ValueError("ensemble_weight 必须在 0.0 到 1.0 之间")
-            
-            long_weight = 1.0 - ensemble_weight
-            
-            # 处理序列长度
-            if len(fs_period) > self.short_seq_length:
-                fs_period = self.feature_extractor.trim_sequence(fs_period, self.short_seq_length)
-                
-            # Short模型预测 (HistGB)
-            try:
-                if self.short_is_sklearn:
-                    short_features = self.feature_extractor.extract_features(fs_period)
-                    short_prob = self._predict_model(self.short_model, short_features, True, self.short_seq_length)
-                else:
-                    short_prob = self._predict_model(self.short_model, fs_period, False, self.short_seq_length)
-            except Exception as e:
-                print(f"Short模型预测时出错: {str(e)}")
-                short_prob = 0.0
-            
-            # 如果short概率低于阈值，则跳过long模型
-            if short_prob < short_threshold:
-                return {
-                    'Short_Probability': short_prob,
-                    'Long_Probability': 0.0,
-                    'Ensemble_Probability': 0.0,
-                    'Ensemble_Weights': f'Short:{ensemble_weight:.1f}, Long:{long_weight:.1f}'
-                }
-
-            # Long模型预测 (BiLSTM-CNN)
-            try:
-                if getattr(self, 'long_is_torch', False):
-                    long_prob = self._predict_long_torch(full_seq)
-                elif self.long_is_sklearn:
-                    long_features = self.feature_extractor.extract_features(full_seq)
-                    long_prob = self._predict_model(self.long_model, long_features, True, self.long_seq_length)
-                else:
-                    long_prob = self._predict_model(self.long_model, full_seq, False, self.long_seq_length)
-            except Exception as e:
-                print(f"Long模型预测时出错: {str(e)}")
-                long_prob = 0.0
-
-            # 计算集成概率
-            try:
-                ensemble_prob = ensemble_weight * short_prob + long_weight * long_prob
-            except Exception as e:
-                print(f"计算集成概率时出错: {str(e)}")
-                ensemble_prob = (short_prob + long_prob) / 2
-            
-            return {
-                'Short_Probability': short_prob,
-                'Long_Probability': long_prob,
-                'Ensemble_Probability': ensemble_prob,
-                'Ensemble_Weights': f'Short:{ensemble_weight:.1f}, Long:{long_weight:.1f}'
-            }
-            
-        except Exception as e:
-            raise Exception(f"预测过程出错: {str(e)}")
+            if self.short_is_sklearn:
+                features = self.feature_extractor.extract_features(fs_period)
+                short_prob = self._predict_model(self.short_model, features, True, self.short_seq_length)
+            else:
+                short_prob = self._predict_model(self.short_model, fs_period, False, self.short_seq_length)
+            short_prob = probability(short_prob, 'Short model probability')
+        except Exception as exc:
+            raise RuntimeError(f'Short model prediction failed: {exc}') from exc
+        weights = f'Short:{ensemble_weight:.1f}, Long:{long_weight:.1f}'
+        if short_prob < short_threshold:
+            return {'Short_Probability': short_prob, 'Long_Probability': 0.0,
+                    'Ensemble_Probability': 0.0, 'Ensemble_Weights': weights}
+        try:
+            if getattr(self, 'long_is_torch', False):
+                long_prob = self._predict_long_torch(full_seq)
+            elif self.long_is_sklearn:
+                features = self.feature_extractor.extract_features(full_seq)
+                long_prob = self._predict_model(self.long_model, features, True, self.long_seq_length)
+            else:
+                long_prob = self._predict_model(self.long_model, full_seq, False, self.long_seq_length)
+            long_prob = probability(long_prob, 'Long model probability')
+        except Exception as exc:
+            raise RuntimeError(f'Long model prediction failed: {exc}') from exc
+        return {'Short_Probability': short_prob, 'Long_Probability': long_prob,
+                'Ensemble_Probability': ensemble_weight * short_prob + long_weight * long_prob,
+                'Ensemble_Weights': weights}
 
     # ===== Torch long 预测路径 =====
     @staticmethod
     def _process_sequence(seq):
-        seq = str(seq).upper()
+        seq = str(seq).upper().replace('U', 'T')
         return ''.join('N' if base not in 'ATCG' else base for base in seq)
 
     @staticmethod
@@ -260,7 +223,8 @@ class PRFPredictor:
         vocab_map = {'A': 0, 'T': 1, 'C': 2, 'G': 3, 'N': 4}
         encoded = [vocab_map.get(base, 4) for base in seq]
         if len(encoded) > max_length:
-            encoded = encoded[:max_length]
+            start = (len(encoded) - max_length) // 2
+            encoded = encoded[start:start + max_length]
         else:
             encoded += [4] * (max_length - len(encoded))
         return np.array(encoded, dtype=np.float32).reshape(1, max_length, 1)
@@ -276,288 +240,112 @@ class PRFPredictor:
         return prob
     
     def predict_sequence(self, sequence, window_size=3, short_threshold=0.1, ensemble_weight=0.4):
+        """Scan every ``window_size`` nucleotides, retaining codon-aligned model inputs.
+
+        Model input lengths stay at 33 and 399 bp. A per-position scan preserves
+        every requested output row but reuses inference for repeated codon windows.
         """
-        预测完整序列中的PRF位点（滑动窗口方法）
-        
-        Args:
-            sequence: 输入DNA序列
-            window_size: 滑动窗口大小 (默认为3)
-            short_threshold: short模型概率阈值 (默认为0.1)
-            ensemble_weight: short模型在集成中的权重 (默认为0.4)
-            
-        Returns:
-            pd.DataFrame: 包含预测结果的DataFrame
-        """
-        if window_size < 1:
-            raise ValueError("窗口大小必须大于等于1")
-        if short_threshold < 0:
-            raise ValueError("short模型阈值必须大于等于0")
-        if not (0.0 <= ensemble_weight <= 1.0):
-            raise ValueError("ensemble_weight 必须在 0.0 到 1.0 之间")
-        
+        window_size = positive_integer(window_size, 'window_size')
+        short_threshold = probability(short_threshold, 'short_threshold')
+        ensemble_weight = probability(ensemble_weight, 'ensemble_weight')
+        if sequence is None:
+            raise ValueError('sequence must be a nucleotide sequence')
+        sequence = str(sequence).upper()
         results = []
-        long_weight = 1.0 - ensemble_weight
-        
-        try:
-            # 确保序列为字符串并转换为大写
-            sequence = str(sequence).upper()
-            
-            # 滑动窗口预测
-            for pos in range(0, len(sequence) - 2, window_size):
-                # 提取窗口序列
+        last_frame, last_prediction = None, None
+        for pos in range(0, len(sequence) - 2, window_size):
+            frame = pos - pos % 3
+            if frame != last_frame:
                 fs_period, full_seq = extract_window_sequences(sequence, pos)
-                
-                if fs_period is None or full_seq is None:
-                    continue
-                
-                # 预测并记录结果
-                pred = self.predict_single_position(fs_period, full_seq, short_threshold, ensemble_weight)
-                pred.update({
-                    'Position': pos,
-                    'Codon': sequence[pos:pos+3],
-                    'Short_Sequence': fs_period,  # 更清晰的命名
-                    'Long_Sequence': full_seq     # 更清晰的命名
-                })
-                results.append(pred)
-            
-            # 创建结果DataFrame
-            results_df = pd.DataFrame(results)
-            
-            return results_df
-            
-        except Exception as e:
-            raise Exception(f"序列预测过程出错: {str(e)}")
+                try:
+                    last_prediction = self.predict_single_position(fs_period, full_seq, short_threshold, ensemble_weight)
+                except Exception as exc:
+                    raise RuntimeError(f'Prediction failed at Position {pos}: {exc}') from exc
+                last_frame = frame
+            pred = dict(last_prediction)
+            pred.update({'Position': pos, 'Codon': sequence[pos:pos + 3],
+                         'Short_Sequence': fs_period, 'Long_Sequence': full_seq})
+            results.append(pred)
+        columns = ['Short_Probability', 'Long_Probability', 'Ensemble_Probability', 'Ensemble_Weights',
+                   'Position', 'Codon', 'Short_Sequence', 'Long_Sequence']
+        return pd.DataFrame(results, columns=columns)
     
-    def plot_sequence_prediction(self, sequence, window_size=3, short_threshold=0.65, 
-                                long_threshold=0.8, ensemble_weight=0.4, title=None, save_path=None, 
-                                figsize=(12, 8), dpi=300):
+    def plot_sequence_prediction(self, sequence, window_size=3, short_threshold=0.65,
+                                 long_threshold=0.8, ensemble_weight=0.4, title=None, save_path=None,
+                                 figsize=(12, 8), dpi=300, *, reference_positions=None,
+                                 heatmap_ratios=(0.1, 0.1, 1), candidate_threshold=0.8):
+        """Predict and plot with the original two-heatmap/bar layout.
+
+        Existing positional arguments and return values are unchanged. Display
+        thresholds filter the plot; the inference gate is lowered when necessary
+        so a short display threshold below 0.1 can expose the long-model score.
+        Optional reference_positions uses independently supplied 0-based coordinates.
+        Set heatmap_ratios=(0.35,0.35,2.8) for thick tutorial-style heatmaps.
         """
-        Plot sequence PRF prediction results
-        
-        Args:
-            sequence: Input DNA sequence
-            window_size: Sliding window size (default: 3)
-            short_threshold: Short model (HistGB) filtering threshold (default: 0.65)
-            long_threshold: Long model (BiLSTM-CNN) filtering threshold (default: 0.8)
-            ensemble_weight: Weight of short model in ensemble (default: 0.4)
-            title: Plot title (optional)
-            save_path: Save path (optional, saves plot if provided)
-            figsize: Figure size (default: (12, 8))
-            dpi: Figure resolution (default: 300)
-            
-        Returns:
-            tuple: (pd.DataFrame, matplotlib.figure.Figure) prediction results and figure object
-        """
-        try:
-            # Validate weight parameter
-            if not (0.0 <= ensemble_weight <= 1.0):
-                raise ValueError("ensemble_weight must be between 0.0 and 1.0")
-            
-            long_weight = 1.0 - ensemble_weight
-            
-            # Get prediction results
-            results_df = self.predict_sequence(sequence, window_size=window_size, 
-                                             short_threshold=0.1, ensemble_weight=ensemble_weight)
-            
-            if results_df.empty:
-                raise ValueError("Prediction results are empty, please check input sequence")
-            
-            # Get sequence length
-            seq_length = len(sequence)
-            
-            # Calculate display width
-            desired_visual_width = max(3, seq_length // 100)  # FS site width ~1% of sequence length
-            prob_width = max(1, desired_visual_width // 3)    # Prediction probability width is 1/3 of FS site width
-            
-            # Create figure with three subplots, set height ratios
-            fig = plt.figure(figsize=figsize)
-            
-            # Set title
-            if title:
-                fig.suptitle(title, y=0.95, fontsize=10)
-            else:
-                fig.suptitle(f'PRF Prediction Results (Weights {ensemble_weight:.1f}:{long_weight:.1f})', y=0.95, fontsize=10)
-            
-            # Adjust subplot ratios, make top two heatmaps smaller
-            gs = fig.add_gridspec(3, 1, height_ratios=[0.1, 0.1, 1], hspace=0.2)
-            
-            # FS site heatmap - using fixed width, no blur effect
-            ax0 = fig.add_subplot(gs[0])
-            fs_data = np.zeros((1, seq_length))
-            # Note: No actual FS site information in sliding window prediction, so keep empty or show predicted sites
-            # Show high-confidence predictions as potential FS sites
-            for _, row in results_df.iterrows():
-                pos = int(row['Position'])
-                if (row['Short_Probability'] >= short_threshold and 
-                    row['Long_Probability'] >= long_threshold and
-                    row['Ensemble_Probability'] >= 0.8):  # High confidence threshold
-                    half_width = desired_visual_width // 2
-                    start_pos = max(0, pos - half_width)
-                    end_pos = min(seq_length, pos + half_width + 1)
-                    fs_data[0, start_pos:end_pos] = 1  # Use fixed value, no gradient
-                
-            ax0.imshow(fs_data, cmap='Reds', aspect='auto', interpolation='nearest')
-            ax0.set_xticks([])
-            ax0.set_yticks([])
-            ax0.set_title('FS site', pad=2, fontsize=8)
-            
-            # Prediction probability heatmap - using fixed width to display probabilities
-            ax1 = fig.add_subplot(gs[1])
-            prob_data = np.zeros((1, seq_length))
-            
-            # Apply dual threshold filtering
-            for _, row in results_df.iterrows():
-                pos = int(row['Position'])
-                if (row['Short_Probability'] >= short_threshold and 
-                    row['Long_Probability'] >= long_threshold):
-                    # Set fixed width for each probability value
-                    start = max(0, pos - prob_width//2)
-                    end = min(seq_length, pos + prob_width//2 + 1)
-                    prob_data[0, start:end] = row['Ensemble_Probability']
-            
-            im = ax1.imshow(prob_data, cmap='Reds', aspect='auto', vmin=0, vmax=1, interpolation='nearest')
-            ax1.set_xticks([])
-            ax1.set_yticks([])
-            ax1.set_title('Prediction', pad=2, fontsize=8)
-            
-            # Main plot (bar chart)
-            ax2 = fig.add_subplot(gs[2])
-            
-            # Apply filtering thresholds
-            filtered_probs = results_df['Ensemble_Probability'].copy()
-            mask = ((results_df['Short_Probability'] < short_threshold) | 
-                   (results_df['Long_Probability'] < long_threshold))
-            filtered_probs[mask] = 0
-            
-            # Draw bar chart - use black color and alpha=0.6 to match prediction_sample style
-            ax2.bar(results_df['Position'], filtered_probs, 
-                    alpha=0.6, color='black', width=1.0)
-            
-            # Set x-axis ticks
-            step = max(seq_length // 10, 50)
-            ax2.set_xticks(np.arange(0, seq_length, step))
-            ax2.tick_params(axis='x', rotation=45)
-            
-            # Set labels
-            ax2.set_xlabel('Position')
-            ax2.set_ylabel('Probability')
-            
-            # Set y-axis range
-            ax2.set_ylim(0, 1)
-            
-            # Add grid
-            ax2.grid(True, alpha=0.3)
-            
-            # Ensure all subplots have consistent x-axis range
-            for ax in [ax0, ax1, ax2]:
-                ax.set_xlim(-1, seq_length)
-            
-            # Adjust layout
-            plt.tight_layout()
-            
-            # Save plot if save path is provided
-            if save_path:
-                save_path = os.fspath(save_path)
-                plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
-                # Also save PDF version
-                if save_path.endswith('.png'):
-                    pdf_path = save_path.replace('.png', '.pdf')
-                    plt.savefig(pdf_path, bbox_inches='tight')
-                print(f"Plot saved to: {save_path}")
-            
-            return results_df, fig
-            
-        except Exception as e:
-            raise Exception(f"Error plotting sequence prediction: {str(e)}")
+        short_threshold = probability(short_threshold, 'short_threshold')
+        long_threshold = probability(long_threshold, 'long_threshold')
+        ensemble_weight = probability(ensemble_weight, 'ensemble_weight')
+        results = self.predict_sequence(sequence, window_size=window_size,
+                                        short_threshold=min(0.1, short_threshold),
+                                        ensemble_weight=ensemble_weight)
+        return plot_prediction_results(
+            results, sequence_length=len(str(sequence)), short_threshold=short_threshold,
+            long_threshold=long_threshold, title=title or f'PRF Prediction Results (Weights {ensemble_weight:.1f}:{1-ensemble_weight:.1f})',
+            save_path=save_path, figsize=figsize, dpi=dpi, reference_positions=reference_positions,
+            heatmap_ratios=heatmap_ratios, candidate_threshold=candidate_threshold)
     
     def predict_regions(self, sequences, short_threshold=0.1, ensemble_weight=0.4):
-        '''
-        Predict region sequences (batch prediction of known 399bp sequences)
-        
-        Args:
-            sequences: 399bp sequences or DataFrame/Series/list containing 399bp sequences
-            short_threshold: Short model probability threshold (default: 0.1)
-            ensemble_weight: Weight of short model in ensemble (default: 0.4)
-            
-        Returns:
-            DataFrame: DataFrame containing prediction probabilities for all sequences
-        ''' 
-        try:
-            # Validate weight parameter
-            if not (0.0 <= ensemble_weight <= 1.0):
-                raise ValueError("ensemble_weight must be between 0.0 and 1.0")
-            
-            # Unify input format
-            if isinstance(sequences, pd.DataFrame):
-                if 'Long_Sequence' in sequences.columns:
-                    sequences = sequences['Long_Sequence']
-                elif '399bp' in sequences.columns:
-                    sequences = sequences['399bp']
-                else:
-                    raise ValueError("DataFrame must contain 'Long_Sequence' or '399bp' column")
-            if isinstance(sequences, pd.Series):
-                sequences = sequences.tolist()
-            elif isinstance(sequences, str):
-                sequences = [sequences]
-            
-            results = []
-            for i, seq399 in enumerate(sequences):
-                try:
-                    # Extract central 33bp from 399bp sequence (for short model use)
-                    seq33 = self._extract_center_sequence(seq399, target_length=self.short_seq_length)
-                    
-                    # Use unified prediction method
-                    pred_result = self.predict_single_position(seq33, seq399, short_threshold, ensemble_weight)
-                    pred_result.update({
-                        'Short_Sequence': seq33,
-                        'Long_Sequence': seq399
-                    })
-                    
-                    results.append(pred_result)
-                    
-                except Exception as e:
-                    print(f"Error processing sequence {i+1}: {str(e)}")
-                    long_weight = 1.0 - ensemble_weight
-                    results.append({
-                        'Short_Probability': 0.0,
-                        'Long_Probability': 0.0,
-                        'Ensemble_Probability': 0.0,
-                        'Ensemble_Weights': f'Short:{ensemble_weight:.1f}, Long:{long_weight:.1f}',
-                        'Short_Sequence': self._extract_center_sequence(seq399, target_length=self.short_seq_length) if len(seq399) >= self.short_seq_length else seq399,
-                        'Long_Sequence': seq399
-                    })
-            
-            return pd.DataFrame(results)
-            
-        except Exception as e:
-            raise Exception(f"Error in region prediction process: {str(e)}")
+        """Predict region sequences; invalid rows and model failures raise with their index."""
+        short_threshold = probability(short_threshold, 'short_threshold')
+        ensemble_weight = probability(ensemble_weight, 'ensemble_weight')
+        if isinstance(sequences, pd.DataFrame):
+            if 'Long_Sequence' in sequences.columns:
+                sequences = sequences['Long_Sequence']
+            elif '399bp' in sequences.columns:
+                sequences = sequences['399bp']
+            else:
+                raise ValueError("DataFrame must contain 'Long_Sequence' or '399bp' column")
+        if isinstance(sequences, pd.Series):
+            sequences = sequences.tolist()
+        elif isinstance(sequences, str):
+            sequences = [sequences]
+        results = []
+        for index, region in enumerate(sequences):
+            if not isinstance(region, str) or not region:
+                raise ValueError(f'Region sequence {index + 1} must be a nonempty nucleotide string')
+            short = self._extract_center_sequence(region, target_length=self.short_seq_length)
+            try:
+                result = self.predict_single_position(short, region, short_threshold, ensemble_weight)
+            except Exception as exc:
+                raise RuntimeError(f'Prediction failed for region {index + 1}: {exc}') from exc
+            result.update({'Short_Sequence': short, 'Long_Sequence': region})
+            results.append(result)
+        columns = ['Short_Probability', 'Long_Probability', 'Ensemble_Probability', 'Ensemble_Weights',
+                   'Short_Sequence', 'Long_Sequence']
+        return pd.DataFrame(results, columns=columns)
+
+    def extract_features(self, sequences):
+        """Return a 2D short-model feature array for a string or iterable of strings."""
+        if isinstance(sequences, str):
+            sequences = [sequences]
+        features = self.feature_extractor.extract_features_batch(sequences)
+        return features.reshape(-1, len(self.feature_extractor.feature_names))
+
+    def get_model_info(self):
+        """Describe the loaded model types and their effective input lengths."""
+        backend = 'pytorch' if self.long_is_torch else ('sklearn' if self.long_is_sklearn else 'keras')
+        return {'short_model': type(self.short_model).__name__,
+                'long_model': type(self.long_model).__name__, 'backend': backend,
+                'short_input_bp': self.short_seq_length,
+                'long_input_bp': self.short_seq_length if self.long_is_sklearn else self.long_seq_length}
 
     def _extract_center_sequence(self, sequence, target_length=33):
-        """Extract subsequence of specified length from center position of sequence"""
-        # Ensure sequence is string
+        """Center-crop with the same odd-length convention as both model inputs."""
         sequence = str(sequence).upper()
-        
-        # If sequence length is less than target length, return original sequence
         if len(sequence) <= target_length:
             return sequence
-        
-        # Calculate center position
-        center = len(sequence) // 2
-        half_target = target_length // 2
-        
-        # Extract center sequence
-        start = center - half_target
-        end = start + target_length
-        
-        # Boundary check
-        if start < 0:
-            start = 0
-            end = target_length
-        elif end > len(sequence):
-            end = len(sequence)
-            start = end - target_length
-        
-        return sequence[start:end]
+        start = (len(sequence) - target_length) // 2
+        return sequence[start:start + target_length]
 
     # 兼容性方法（向后兼容，但标记为废弃）
     def predict_full(self, sequence, window_size=3, short_threshold=0.1, short_weight=0.4, plot=False):
@@ -614,3 +402,204 @@ class PRFPredictor:
             results_df['399bp'] = results_df['Long_Sequence']
         
         return results_df
+
+
+PROBABILITY_COLUMNS = ['Short_Probability', 'Long_Probability', 'Ensemble_Probability']
+
+
+def _table(results):
+    if not isinstance(results, pd.DataFrame):
+        raise ValueError('results must be a prediction DataFrame for one sequence')
+    required = ['Position'] + PROBABILITY_COLUMNS
+    missing = [name for name in required if name not in results.columns]
+    if missing:
+        raise ValueError(f'Missing prediction columns: {missing}')
+    if results.empty:
+        raise ValueError('Prediction results are empty')
+    positions = results.Position.to_numpy(dtype=float)
+    scores = results[PROBABILITY_COLUMNS].to_numpy(dtype=float)
+    if not np.isfinite(positions).all() or (positions < 0).any() or (positions != np.floor(positions)).any():
+        raise ValueError('Position must contain nonnegative integer nucleotide coordinates')
+    if results.Position.duplicated().any():
+        raise ValueError('Position must be unique; pass results for one sequence at a time')
+    if not np.isfinite(scores).all() or (scores < 0).any() or (scores > 1).any():
+        raise ValueError('Prediction probabilities must be finite and between 0 and 1')
+    return positions.astype(int)
+
+
+def _scores(results, short_threshold, long_threshold):
+    short_threshold = probability(short_threshold, 'short_threshold')
+    long_threshold = probability(long_threshold, 'long_threshold')
+    mask = (results.Short_Probability >= short_threshold) & (results.Long_Probability >= long_threshold)
+    return results.Ensemble_Probability.where(mask, 0).to_numpy(dtype=float), mask.to_numpy()
+
+
+def _ratios(values):
+    values = np.asarray(values, dtype=float)
+    if values.shape != (3,) or not np.isfinite(values).all() or (values <= 0).any():
+        raise ValueError('heatmap_ratios must contain three positive finite numbers')
+    return values.tolist()
+
+
+def _references(values, length=None):
+    if values is None:
+        return []
+    if np.isscalar(values):
+        values = [values]
+    references = []
+    for value in values:
+        if isinstance(value, bool) or not isinstance(value, Integral) or value < 0 or (length is not None and value >= length):
+            raise ValueError('reference_positions must contain 0-based integer coordinates within the sequence')
+        references.append(int(value))
+    return references
+
+
+def _save(figure, save_path, dpi):
+    if save_path is not None:
+        path = Path(save_path)
+        figure.savefig(path, dpi=dpi, bbox_inches='tight')
+        if path.suffix.lower() == '.png':
+            figure.savefig(path.with_suffix('.pdf'), bbox_inches='tight')
+
+
+def plot_prediction_results(results, sequence_length=None, short_threshold=0.65,
+                            long_threshold=0.8, title=None, save_path=None,
+                            figsize=(12, 8), dpi=300, *, reference_positions=None,
+                            heatmap_ratios=(0.1, 0.1, 1), candidate_threshold=0.8):
+    """Plot an existing single-sequence prediction table; return ``(results, figure)``.
+
+    The original two red heatmaps and black bars are retained. Use
+    ``heatmap_ratios=(0.35, 0.35, 2.8)`` for the tutorial's thick heatmaps.
+    ``reference_positions`` marks independently supplied 0-based positions in
+    green; candidate heatmaps remain generated from the prediction scores.
+    Overlapping heatmap marks show their maximum score, not the last row's score.
+    ``sequence_length`` defaults to the last scanned position plus three; pass
+    the actual length to retain the full extent of a sparsely scanned sequence.
+    The input table is not modified and no models are loaded.
+    """
+    positions = _table(results)
+    length = positive_integer(sequence_length if sequence_length is not None else int(positions.max()) + 3,
+                              'sequence_length')
+    if positions.max() >= length:
+        raise ValueError('sequence_length must be larger than every scanned Position')
+    scores, eligible = _scores(results, short_threshold, long_threshold)
+    candidate_threshold = probability(candidate_threshold, 'candidate_threshold')
+    ratios = _ratios(heatmap_ratios)
+    references = _references(reference_positions, length)
+
+    desired_width = max(3, length // 100)
+    probability_width = max(1, desired_width // 3)
+    candidates = np.zeros((1, length))
+    heatmap_scores = np.zeros((1, length))
+    for position, score, visible in zip(positions, scores, eligible):
+        if not visible:
+            continue
+        start, end = max(0, position - probability_width // 2), min(length, position + probability_width // 2 + 1)
+        heatmap_scores[0, start:end] = np.maximum(heatmap_scores[0, start:end], score)
+        if score >= candidate_threshold:
+            start, end = max(0, position - desired_width // 2), min(length, position + desired_width // 2 + 1)
+            candidates[0, start:end] = 1
+
+    figure = plt.figure(figsize=figsize, dpi=dpi)
+    figure.suptitle(title or 'PRF Prediction Results', fontsize=10)
+    grid = figure.add_gridspec(3, 1, height_ratios=ratios)
+    axes = [figure.add_subplot(grid[row]) for row in range(3)]
+    for axis, data, label in zip(axes[:2], [candidates, heatmap_scores], ['FS site (predicted candidates)', 'Prediction']):
+        axis.imshow(data, cmap='Reds', aspect='auto', vmin=0, vmax=1, interpolation='nearest')
+        axis.set(xticks=[], yticks=[], title=label)
+        axis.title.set_fontsize(10)
+    bars = axes[2]
+    bars.bar(positions, scores, alpha=0.6, color='black', width=1)
+    bars.set(xlabel='Position (0-based nt)', ylabel='Filtered ensemble score', ylim=(0, 1))
+    bars.set_xticks(np.arange(0, length, max(length // 10, 50)))
+    bars.tick_params(axis='x', rotation=45)
+    bars.grid(True, alpha=0.3)
+    for axis in axes:
+        axis.set_xlim(-1, length)
+        for reference in references:
+            axis.axvline(reference, color='#009E73', linestyle='--', linewidth=1.2,
+                         label=f'Reference {reference}' if axis is bars else None)
+    if references:
+        bars.legend(loc='upper right', fontsize=9)
+    figure.tight_layout(rect=(0, 0, 1, 0.94))
+    _save(figure, save_path, dpi)
+    return results, figure
+
+
+def plot_prediction_regions(results, centers, radius=15, short_threshold=0.2,
+                            long_threshold=0.2, score_threshold=0.7, *,
+                            candidate_threshold=0.8, reference_positions=None,
+                            heatmap_ratios=(0.35, 0.35, 2.8), figsize=None,
+                            dpi=120, save_path=None):
+    """Compare equally sized regions of existing predictions, without inference.
+
+    ``centers`` is a list of 0-based positions or ``(label, position)`` pairs,
+    e.g. ``[('Reference', 309), ('Competitor', 645)]``. Return ``(summary, figure)``.
+    Each column contains two thick heatmaps above bars with the same 0–1 scale.
+    ``high_score_positions`` counts scanned rows reaching ``score_threshold``;
+    nearby scores can share overlapping input windows and are not independent
+    observations. Regions with no scanned rows have NaN ``local_max``.
+    """
+    positions = _table(results)
+    scores, eligible = _scores(results, short_threshold, long_threshold)
+    if isinstance(radius, bool) or not isinstance(radius, Integral) or radius < 0:
+        raise ValueError('radius must be a nonnegative integer in nucleotides')
+    radius = int(radius)
+    score_threshold = probability(score_threshold, 'score_threshold')
+    candidate_threshold = probability(candidate_threshold, 'candidate_threshold')
+    ratios = _ratios(heatmap_ratios)
+    references = _references(reference_positions)
+    regions = []
+    for item in centers:
+        if isinstance(item, Integral) and not isinstance(item, bool):
+            label, center = 'Region', item
+        else:
+            label, center = item
+        if isinstance(center, bool) or not isinstance(center, Integral) or center < 0:
+            raise ValueError('centers must contain nonnegative integer nucleotide coordinates')
+        regions.append((str(label), int(center)))
+    if not regions:
+        raise ValueError('Provide at least one region center')
+
+    figure = plt.figure(figsize=figsize or (max(5, 3.5 * len(regions)), 5.3), dpi=dpi)
+    grid = figure.add_gridspec(3, len(regions), height_ratios=ratios)
+    summaries = []
+    for column, (label, center) in enumerate(regions):
+        local = np.abs(positions - center) <= radius
+        count = int(np.sum(local & eligible & (scores >= score_threshold)))
+        summaries.append(dict(region=label, center=center, high_score_positions=count,
+                              scanned_positions=int(local.sum()),
+                              local_max=float(scores[local].max()) if local.any() else float('nan')))
+        width = 2 * radius + 1
+        candidates, heatmap_scores = np.zeros((1, width)), np.zeros((1, width))
+        for position, score, visible in zip(positions[local], scores[local], eligible[local]):
+            if not visible:
+                continue
+            index = int(position - center + radius)
+            heatmap_scores[0, index] = score
+            if score >= candidate_threshold:
+                candidates[0, max(0, index - 1):min(width, index + 2)] = 1
+        axes = [figure.add_subplot(grid[row, column]) for row in range(3)]
+        extent = (-radius - 0.5, radius + 0.5, 0, 1)
+        for axis, data in zip(axes[:2], [candidates, heatmap_scores]):
+            axis.imshow(data, cmap='Reds', aspect='auto', vmin=0, vmax=1,
+                        interpolation='nearest', extent=extent)
+            axis.set(xticks=[], yticks=[])
+        axes[0].set_title(f'{label}: {center}\nFS site (predicted candidates)', fontsize=9)
+        axes[1].set_title('Prediction', fontsize=9)
+        bars = axes[2]
+        bars.bar(positions[local] - center, scores[local], color='black', alpha=0.6, width=1)
+        bars.axhline(score_threshold, color='gray', linestyle=':', linewidth=1)
+        bars.set(xlim=extent[:2], ylim=(0, 1.03), xlabel='Offset from center (nt)',
+                 title=f'Score >= {score_threshold:g}: {count} positions')
+        bars.set_xticks([-radius, 0, radius] if radius else [0])
+        bars.grid(axis='y', alpha=0.2)
+        if column == 0:
+            bars.set_ylabel('Filtered ensemble score')
+        for axis in axes:
+            for reference in references:
+                if abs(reference - center) <= radius:
+                    axis.axvline(reference - center, color='#009E73', linestyle='--', linewidth=1.2)
+    figure.tight_layout()
+    _save(figure, save_path, dpi)
+    return pd.DataFrame(summaries), figure
