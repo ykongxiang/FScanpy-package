@@ -380,18 +380,21 @@ seq_file = get_test_data_path('full_seq.xlsx')
 
 ```python
 from FScanpy import predict_prf, plot_prf_prediction
+from FScanpy.data import get_test_data_path
+import pandas as pd
 import matplotlib.pyplot as plt
 
 # Define sequence
-full_seq = pd.read.excel(seq_file)
+full_seq = pd.read_excel(get_test_data_path('full_seq.xlsx'))
+sequence = full_seq.iloc[0]['Full_Sequence']
 
 # Method 1: Simple prediction
-results = predict_prf(sequence=full_seq[0]['full_seq'])
+results = predict_prf(sequence=sequence)
 print(f"Found {len(results)} potential sites")
 
 # Method 2: Prediction with visualization
 results, fig = plot_prf_prediction(
-    sequence=sequence=full_seq[0]['full_seq'],
+    sequence=sequence,
     window_size=1,              # Scan every position
     short_threshold=0.3,        # Display sites above 0.3
     long_threshold=0.4,         # Display sites above 0.4
@@ -418,9 +421,9 @@ import pandas as pd
 region_data = pd.DataFrame({
     'sample_id': ['sample1', 'sample2', 'sample3'],
     'Long_Sequence': [
-        'ATGCGT...',  # 399bp sequence 1
-        'GCTATAG...',  # 399bp sequence 2  
-        'TTACGGA...'   # 399bp sequence 3
+        'ATG' * 133,  # 399bp sequence 1
+        'GCT' * 133,  # 399bp sequence 2
+        'TTA' * 133   # 399bp sequence 3
     ],
     'known_label': [1, 0, 1]  # Optional: known labels for validation
 })

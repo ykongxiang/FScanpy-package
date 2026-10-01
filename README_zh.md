@@ -47,7 +47,7 @@ python -m notebook
 from FScanpy import predict_prf
 
 # 简单序列预测
-sequence = "ATGCGTACGTTAGC..." # 您的 DNA 序列
+sequence = "ATGCGTACGTTAGC" * 100 # 您的 DNA 序列
 results = predict_prf(sequence=sequence)
 
 # 查看前十个预测结果
@@ -78,7 +78,7 @@ predictor = PRFPredictor()
 
 # 对预提取区域进行批量预测
 data = pd.DataFrame({
-    'Long_Sequence': ['ATGCGT...' * 60, 'GCTATAG...' * 57]  # 399bp 序列
+    'Long_Sequence': ['ATG' * 133, 'GCT' * 133]  # 399bp 序列
 })
 results = predictor.predict_regions(data, ensemble_weight=0.4)
 
@@ -151,10 +151,10 @@ predictor = PRFPredictor()
 predictor.predict_sequence(sequence, ensemble_weight=0.4)
 
 # 区域预测（批处理）
-predictor.predict_regions(dataframe, ensemble_weight=0.4)
+predictor.predict_regions(data, ensemble_weight=0.4)
 
 # 特征提取
-predictor.extract_features(sequences)
+predictor.extract_features([sequence])
 
 # 模型信息
 predictor.get_model_info()
@@ -181,6 +181,11 @@ FScanpy 与 FScanR 流程无缝协作，提供全面的 PRF 分析：
 
 ```python
 from FScanpy import fscanr, extract_prf_regions, predict_prf
+from FScanpy.data import get_test_data_path
+import pandas as pd
+
+blastx_data = pd.read_excel(get_test_data_path('blastx_example.xlsx'))
+mrna_file = get_test_data_path('mrna_example.fasta')
 
 # 步骤 1：使用 FScanR 进行 BLASTX 分析
 blastx_results = fscanr(
@@ -191,7 +196,7 @@ blastx_results = fscanr(
 )
 
 # 步骤 2：提取 PRF 候选区域
-prf_regions = extract_prf_regions(original_sequence, blastx_results)
+prf_regions = extract_prf_regions(mrna_file, blastx_results)
 
 # 步骤 3：使用 FScanpy 进行预测
 final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)

@@ -150,10 +150,10 @@ predictor = PRFPredictor()
 predictor.predict_sequence(sequence, ensemble_weight=0.4)
 
 # Region prediction (batch processing)
-predictor.predict_regions(dataframe, ensemble_weight=0.4)
+predictor.predict_regions(data, ensemble_weight=0.4)
 
 # Feature extraction
-predictor.extract_features(sequences)
+predictor.extract_features([sequence])
 
 # Model information
 predictor.get_model_info()
@@ -180,6 +180,11 @@ FScanpy works seamlessly with the FScanR pipeline for comprehensive PRF analysis
 
 ```python
 from FScanpy import fscanr, extract_prf_regions, predict_prf
+from FScanpy.data import get_test_data_path
+import pandas as pd
+
+blastx_data = pd.read_excel(get_test_data_path('blastx_example.xlsx'))
+mrna_file = get_test_data_path('mrna_example.fasta')
 
 # Step 1: BLASTX analysis with FScanR
 blastx_results = fscanr(
@@ -190,7 +195,7 @@ blastx_results = fscanr(
 )
 
 # Step 2: Extract PRF candidate regions
-prf_regions = extract_prf_regions(original_sequence, blastx_results)
+prf_regions = extract_prf_regions(mrna_file, blastx_results)
 
 # Step 3: Predict with FScanpy
 final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)

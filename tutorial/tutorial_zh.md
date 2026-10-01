@@ -380,18 +380,21 @@ seq_file = get_test_data_path('full_seq.xlsx')
 
 ```python
 from FScanpy import predict_prf, plot_prf_prediction
+from FScanpy.data import get_test_data_path
+import pandas as pd
 import matplotlib.pyplot as plt
 
 # 定义序列
-full_seq = pd.read.excel(seq_file)
+full_seq = pd.read_excel(get_test_data_path('full_seq.xlsx'))
+sequence = full_seq.iloc[0]['Full_Sequence']
 
 # 方法 1：简单预测
-results = predict_prf(sequence=full_seq[0]['full_seq'])
+results = predict_prf(sequence=sequence)
 print(f"发现 {len(results)} 个潜在位点")
 
 # 方法 2：带可视化的预测
 results, fig = plot_prf_prediction(
-    sequence=full_seq[0]['full_seq'],
+    sequence=sequence,
     window_size=1,              # 扫描每个位置
     short_threshold=0.3,        # 显示概率 > 0.3 的位点
     long_threshold=0.4,         # 显示概率 > 0.4 的位点
@@ -418,9 +421,9 @@ import pandas as pd
 region_data = pd.DataFrame({
     'sample_id': ['sample1', 'sample2', 'sample3'],
     'Long_Sequence': [
-        'ATGCGT...',  # 399bp 序列 1
-        'GCTATAG...',  # 399bp 序列 2  
-        'TTACGGA...'   # 399bp 序列 3
+        'ATG' * 133,  # 399bp 序列 1
+        'GCT' * 133,  # 399bp 序列 2
+        'TTA' * 133   # 399bp 序列 3
     ],
     'known_label': [1, 0, 1]  # 可选：用于验证的已知标签
 })
