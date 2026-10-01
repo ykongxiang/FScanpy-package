@@ -22,10 +22,10 @@
 
 绘图已经进入包的公开接口：`plot_prediction_results()` 用于已有结果，`plot_prediction_regions()` 用于局部并排比较；现有绘图入口增加可选参考标线和面板比例。两者无需重复推理，并保留两个热图和黑色柱状图布局。逐位扫描对重复窗口复用预测，输出坐标和行数保留。
 
-本次未修改用户的中文 notebook。新增使用说明见[中文绘图 API 指南](plotting_zh.md)。本地 TensorFlow 开发实现具有另一套模型和特征流程，本 PR 不将其替换或混入官方 PyTorch 实现；本次结果不等于完整审计了该开发实现。
+本次保留用户中文 notebook 的全部 Markdown 描述，仅更新运行代码与输出。新增使用说明见[中文绘图 API 指南](plotting_zh.md)。本地 TensorFlow 开发实现具有另一套模型和特征流程，本 PR 不将其替换或混入官方 PyTorch 实现；本次结果不等于完整审计了该开发实现。
 
 参考：[FScanR 原始 R 实现](https://github.com/seanchen607/FScanR/blob/master/R/FScanR.R)、[NCBI BLASTX 坐标说明](https://blast.ncbi.nlm.nih.gov/Blast.cgi?LINK_LOC=blasthome&PAGE_TYPE=BlastSearch&PROGRAM=blastx)。
 
-验证结果：源码及安装后的 wheel 均通过 49 项测试。官方 Demo、原预测示例、新绘图示例，以及当前新版中英文教程的副本全部执行成功。五条完整教程序列和 703 行逐位扫描结果与修复前逐项比较，概率最大绝对差均为 0。新版教程原文件的 SHA-256 在验证前后完全相同。
+验证结果：源码及安装后的 wheel 均通过 55 项测试。官方 Demo、新版中英文预测教程及可复用绘图示例均在仓库外、无相邻数据目录的环境中完整执行成功。五条完整教程序列和 703 行逐位扫描结果与修复前逐项比较，概率最大绝对差均为 0。教程的 Markdown 描述与作者版本逐单元格核对保持不变；旧版参考文件逐字节保留。详见 [notebook 与安装包验证记录](tutorial_validation_zh.md)。
 
 本机 705 nt 序列逐位扫描的两次测量中位耗时约从 2.63 秒降至 0.95 秒；最终验证期间有其他任务同时运行，另一次测量为 1.18 秒。此处只说明重复密码子窗口缓存的效果，不作为全基因组性能基准。扫描行数仍为 703，概率逐项一致。

@@ -47,6 +47,8 @@ summary, figure = plot_prediction_regions(
 
 完整可运行示例见[已执行的绘图 notebook](../examples/reusable_plotting.ipynb)，使用包内附带序列，无需额外数据路径。
 
+新版[中文预测教程](../tutorial/predict_sample_zh.ipynb)也直接调用这些绘图接口。五条教程案例通过 `get_test_data_path("predict_sample_examples.csv")` 从安装包读取，无需相邻数据目录；详见[安装包与 notebook 验证记录](tutorial_validation_zh.md)。
+
 README 中介绍的 `predictor.extract_features(sequences)` 和 `predictor.get_model_info()` 已补齐。前者返回二维短模型特征数组，后者报告模型类型、后端及实际输入长度。遗留的 `SequenceFeatureExtractor.predict_region_batch()` 会发出弃用提示并委托给公开区域接口；推荐直接使用 `PRFPredictor.predict_regions()`。区域输入以 `Long_Sequence` / `399bp` 的中心 33 bp 作为短模型输入。
 
 FScanR 产生的比对坐标沿用 BLASTX 的 1-based 约定。`extract_prf_regions(fasta, sites)` 会先将这些坐标转换到编码链方向的 0-based 位置，再提取窗口；如果输入表已使用 0-based 坐标，请明确传入 `coordinate_base=0`。返回表中的 `FS_start` 和 `FS_end` 保留输入值。参见 [FScanR 原始实现](https://github.com/seanchen607/FScanR/blob/master/R/FScanR.R)和 [NCBI BLASTX 说明](https://blast.ncbi.nlm.nih.gov/Blast.cgi?LINK_LOC=blasthome&PAGE_TYPE=BlastSearch&PROGRAM=blastx)。

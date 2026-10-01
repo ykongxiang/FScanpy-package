@@ -15,6 +15,7 @@
 - `plot_prediction_results()` for existing prediction tables and `plot_prediction_regions()` for side-by-side local comparisons without repeating inference.
 - Optional reference markers, heatmap panel ratios and candidate thresholds in existing plotting APIs; existing positional parameters and return structures are retained.
 - A completed reusable plotting notebook, bilingual API usage notes and regression tests.
+- Bundle the five current prediction-tutorial sequences as `predict_sample_examples.csv`. Updated English and Chinese tutorials load these data through the package API and use the package plotting helpers directly.
 
 ### Changed
 - Reuse inference for repeated codon windows while preserving every requested scan output row.

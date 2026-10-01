@@ -62,7 +62,7 @@ def predict_prf(
 **参数：**
 - `sequence`：用于滑动窗口预测的单个或多个 DNA 序列
 - `data`：DataFrame 数据，必须包含 'Long_Sequence' 或 '399bp' 列用于区域预测
-- `window_size`：滑动窗口大小（默认：3，推荐：1-10）
+- `window_size`：扫描间隔，即每隔多少个核苷酸预测一次（默认：3，推荐：1-10）；增大间隔可减少长序列及全基因组扫描的预测次数
 - `short_threshold`：短模型（HistGB）概率阈值（默认：0.1，范围：0.0-1.0）
 - `ensemble_weight`：短模型在集成中的权重（默认：0.4，范围：0.0-1.0）
 - `model_dir`：模型目录路径（可选，如果为 None 则使用内置模型）
@@ -126,7 +126,7 @@ def plot_prf_prediction(
 
 **参数：**
 - `sequence`：输入 DNA 序列（字符串）
-- `window_size`：滑动窗口大小（默认：3）
+- `window_size`：扫描间隔，即每隔多少个核苷酸预测一次（默认：3）；模型输入长度保持不变
 - `short_threshold`：热图显示的短模型过滤阈值（默认：0.65）
 - `long_threshold`：热图显示的长模型过滤阈值（默认：0.8）
 - `ensemble_weight`：集成中短模型的权重（默认：0.4）
@@ -194,7 +194,7 @@ def predict_sequence(self, sequence, window_size=3, short_threshold=0.1, ensembl
 
 **参数：**
 - `sequence`：输入 DNA 序列
-- `window_size`：滑动窗口大小（默认：3）
+- `window_size`：扫描间隔，即每隔多少个核苷酸预测一次（默认：3）；模型输入长度保持不变
 - `short_threshold`：短模型概率阈值（默认：0.1）
 - `ensemble_weight`：集成中短模型权重（默认：0.4）
 

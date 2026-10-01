@@ -45,6 +45,8 @@ Both helpers preserve the input table. Local plots use equal nucleotide ranges a
 
 For a complete runnable example using bundled data, see [the completed plotting notebook](../examples/reusable_plotting.ipynb).
 
+The updated [prediction tutorial](../tutorial/predict_sample.ipynb) also calls these plotting APIs directly. Its five example sequences are loaded from the installed package via `get_test_data_path("predict_sample_examples.csv")`, so an adjacent data directory is unnecessary.
+
 The documented `predictor.extract_features(sequences)` and `predictor.get_model_info()` methods are now implemented. They return a 2D short-model feature array and model types, backend and effective input lengths respectively. The obsolete `SequenceFeatureExtractor.predict_region_batch()` emits a deprecation warning and delegates to the public region predictor; use `PRFPredictor.predict_regions()` directly. Region prediction uses the central 33 bp of `Long_Sequence`/`399bp` as its short-model input.
 
 FScanR alignment coordinates retain the BLASTX 1-based convention. `extract_prf_regions(fasta, sites)` now converts these to 0-based coordinates on the coding strand before extracting windows. If your input table is already 0-based, call `extract_prf_regions(fasta, sites, coordinate_base=0)`. `FS_start` and `FS_end` in the returned table retain the input coordinates. See [the FScanR reference implementation](https://github.com/seanchen607/FScanR/blob/master/R/FScanR.R) and [NCBI BLASTX documentation](https://blast.ncbi.nlm.nih.gov/Blast.cgi?LINK_LOC=blasthome&PAGE_TYPE=BlastSearch&PROGRAM=blastx).

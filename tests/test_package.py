@@ -26,11 +26,46 @@ def regions():
 
 def test_bundled_data():
     assert list_test_data() == [
-        "blastx_example.xlsx", "full_seq.xlsx", "mrna_example.fasta", "region_example.csv"
+        "blastx_example.xlsx", "full_seq.xlsx", "mrna_example.fasta",
+        "predict_sample_examples.csv", "region_example.csv"
     ]
     for name in list_test_data():
         assert Path(get_test_data_path(name)).stat().st_size > 0
     assert len(pd.read_excel(get_test_data_path("full_seq.xlsx"))) == 5
+
+
+def test_bundled_tutorial_data():
+    examples = pd.read_csv(get_test_data_path("predict_sample_examples.csv"))
+    assert examples.columns.tolist() == [
+        "Sequence_ID", "DNA_seqid", "Genome", "Product", "length",
+        "reference_codon_start_0based", "Full_Sequence"
+    ]
+    assert examples.Sequence_ID.tolist() == list(range(5))
+    assert examples.Full_Sequence.str.fullmatch('[ATGC]+').all()
+    assert examples.Full_Sequence.str.len().eq(examples.length).all()
+    assert examples.reference_codon_start_0based.ge(0).all()
+    assert (examples.reference_codon_start_0based + 3 <= examples.length).all()
+    assert examples.reference_codon_start_0based.mod(3).eq(0).all()
+
+
+@pytest.mark.parametrize('sequence_id,count,peak,maximum,reference_count', [
+    (0, 260, 300, 0.963053, 5), (1, 235, 645, 0.976088, 6),
+    (2, 141, 249, 0.999480, 10), (3, 253, 24, 0.997771, 5),
+    (4, 363, 258, 0.969608, None),
+])
+def test_bundled_tutorial_predictions(predictor, sequence_id, count, peak, maximum, reference_count):
+    examples = pd.read_csv(get_test_data_path('predict_sample_examples.csv')).set_index('Sequence_ID')
+    row = examples.loc[sequence_id]
+    result = predictor.predict_sequence(row.Full_Sequence, window_size=3,
+                                        short_threshold=0.1, ensemble_weight=0.6)
+    scores = result.Ensemble_Probability.where(
+        (result.Short_Probability >= 0.2) & (result.Long_Probability >= 0.2), 0)
+    assert len(result) == count
+    assert result.loc[scores.idxmax(), 'Position'] == peak
+    np.testing.assert_allclose(scores.max(), maximum, atol=5e-4, rtol=0)
+    if reference_count is not None:
+        local = (result.Position - row.reference_codon_start_0based).abs() <= 15
+        assert int((scores[local] >= 0.7).sum()) == reference_count
 
 
 @pytest.mark.parametrize("column", ["Long_Sequence", "399bp"])

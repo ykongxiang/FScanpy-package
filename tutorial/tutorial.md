@@ -62,7 +62,7 @@ def predict_prf(
 **Parameters:**
 - `sequence`: Single or multiple DNA sequences for sliding window prediction
 - `data`: DataFrame data, must contain 'Long_Sequence' or '399bp' column for region prediction  
-- `window_size`: Sliding window size (default: 3, recommended: 1-10)
+- `window_size`: Scanning interval in nucleotides (default: 3, recommended: 1-10); larger intervals reduce prediction calls for long sequences and whole-genome scans
 - `short_threshold`: Short model (HistGB) probability threshold (default: 0.1, range: 0.0-1.0)
 - `ensemble_weight`: Weight of short model in ensemble (default: 0.4, range: 0.0-1.0)
 - `model_dir`: Model directory path (optional, uses built-in models if None)
@@ -126,7 +126,7 @@ def plot_prf_prediction(
 
 **Parameters:**
 - `sequence`: Input DNA sequence (string)
-- `window_size`: Sliding window size (default: 3)
+- `window_size`: Scanning interval in nucleotides (default: 3); model input lengths remain unchanged
 - `short_threshold`: Short model filtering threshold for heatmap display (default: 0.65)
 - `long_threshold`: Long model filtering threshold for heatmap display (default: 0.8)
 - `ensemble_weight`: Weight of short model in ensemble (default: 0.4)
@@ -194,7 +194,7 @@ def predict_sequence(self, sequence, window_size=3, short_threshold=0.1, ensembl
 
 **Parameters:**
 - `sequence`: Input DNA sequence
-- `window_size`: Sliding window size (default: 3)
+- `window_size`: Scanning interval in nucleotides (default: 3); model input lengths remain unchanged
 - `short_threshold`: Short model probability threshold (default: 0.1)
 - `ensemble_weight`: Short model weight in ensemble (default: 0.4)
 

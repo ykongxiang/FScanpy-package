@@ -228,3 +228,5 @@ If you use FScanpy in your research, please cite:
 ## Reusable plotting
 
 See the [plotting API guide](docs/plotting.md) and [completed plotting notebook](examples/reusable_plotting.ipynb) for thick heatmaps, reference markers and local comparisons using existing prediction tables.
+
+The updated [English prediction tutorial](tutorial/predict_sample.ipynb) and [Chinese tutorial](tutorial/predict_sample_zh.ipynb) use the package plotting functions and bundled `predict_sample_examples.csv` (FScanpy 1.0.1 or later). After installing the matching package in the notebook kernel, the notebooks can run from any folder without a companion data directory. The [executed legacy reference](tutorial/predict_sample_legacy.ipynb) and [historical saved figures](tutorial/predict_sample_legacy_saved.ipynb) are included for comparison.
