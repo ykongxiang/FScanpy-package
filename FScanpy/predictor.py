@@ -223,7 +223,8 @@ class PRFPredictor:
         vocab_map = {'A': 0, 'T': 1, 'C': 2, 'G': 3, 'N': 4}
         encoded = [vocab_map.get(base, 4) for base in seq]
         if len(encoded) > max_length:
-            encoded = encoded[:max_length]
+            start = (len(encoded) - max_length) // 2
+            encoded = encoded[start:start + max_length]
         else:
             encoded += [4] * (max_length - len(encoded))
         return np.array(encoded, dtype=np.float32).reshape(1, max_length, 1)
@@ -339,31 +340,12 @@ class PRFPredictor:
                 'long_input_bp': self.short_seq_length if self.long_is_sklearn else self.long_seq_length}
 
     def _extract_center_sequence(self, sequence, target_length=33):
-        """Extract subsequence of specified length from center position of sequence"""
-        # Ensure sequence is string
+        """Center-crop with the same odd-length convention as both model inputs."""
         sequence = str(sequence).upper()
-        
-        # If sequence length is less than target length, return original sequence
         if len(sequence) <= target_length:
             return sequence
-        
-        # Calculate center position
-        center = len(sequence) // 2
-        half_target = target_length // 2
-        
-        # Extract center sequence
-        start = center - half_target
-        end = start + target_length
-        
-        # Boundary check
-        if start < 0:
-            start = 0
-            end = target_length
-        elif end > len(sequence):
-            end = len(sequence)
-            start = end - target_length
-        
-        return sequence[start:end]
+        start = (len(sequence) - target_length) // 2
+        return sequence[start:start + target_length]
 
     # 兼容性方法（向后兼容，但标记为废弃）
     def predict_full(self, sequence, window_size=3, short_threshold=0.1, short_weight=0.4, plot=False):

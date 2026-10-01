@@ -200,7 +200,7 @@ final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)
 
 - **[Complete Tutorial](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/tutorial.md)**: Comprehensive usage guide with examples
 - **[Demo Notebook](https://github.com/ykongxiang/FScanpy-package/blob/master/FScanpy_Demo.ipynb)**: Practical usage of each function in the library and demonstration of analysis workflow results
-- **Prediction tutorials**: [English](tutorial/predict_sample.ipynb) / [中文](tutorial/predict_sample_zh.ipynb), using the bundled `full_seq.xlsx`.
+- **Prediction tutorials**: [English](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/predict_sample.ipynb) / [中文](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/predict_sample_zh.ipynb), using the bundled `full_seq.xlsx`.
 
 ## 📝 Citation
 

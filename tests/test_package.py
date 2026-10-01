@@ -153,6 +153,22 @@ def test_short_feature_vector_has_the_trained_dimension():
     assert len(extractor.extract_features('ATG')) == len(extractor.feature_names)
 
 
+@pytest.mark.parametrize('length', [400, 402, 705])
+def test_overlong_region_models_use_the_same_center(predictor, monkeypatch, length):
+    source = ('ATGC' * 200)[:length]
+    assert predictor._extract_center_sequence(source, 33) == predictor.feature_extractor.trim_sequence(source, 33)
+
+    class CaptureInput(torch.nn.Module):
+        def forward(self, value):
+            self.received = value.detach().cpu().numpy()
+            return value.new_tensor(0.8)
+
+    capture = CaptureInput()
+    monkeypatch.setattr(predictor, 'long_model', capture)
+    predictor._predict_long_torch(source)
+    np.testing.assert_array_equal(capture.received, predictor.cnn_processor.prepare_sequence(source))
+
+
 
 def test_model_failure_is_not_reported_as_zero_probability(predictor, monkeypatch):
     def failure(*args, **kwargs):
