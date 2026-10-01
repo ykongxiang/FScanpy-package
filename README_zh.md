@@ -201,8 +201,8 @@ final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)
 
 - **[完整教程](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/tutorial_zh.md)**：包含示例的综合使用指南
 - **[演示笔记本](https://github.com/ykongxiang/FScanpy-package/blob/master/FScanpy_Demo.ipynb)**：库中每个函数的实际用法以及分析流程结果演示
-- **[预测结果解释](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/predict_sample.ipynb)**：FScanpy 绘图结果的详细解释和信号分析
-- **[旧版已执行预测参考](tutorial/predict_sample_legacy.ipynb)**：保留旧模型的完整运行结果；[原始保存结果归档](tutorial/predict_sample_legacy_saved.ipynb)另附六幅历史原图，便于对照。
+- **[中文版预测结果解释](tutorial/predict_sample_zh.ipynb)**：新版 PyTorch 完整序列案例、双热图读图方法及局部竞争区域分析；另有[英文版](tutorial/predict_sample.ipynb)。
+- **[中文版旧版已执行预测参考](tutorial/predict_sample_legacy_zh.ipynb)**：保留旧模型的完整运行结果；[中文版历史保存结果归档](tutorial/predict_sample_legacy_saved_zh.ipynb)另附六幅历史原图，便于对照。
 
 ## 📝 引用
 

@@ -38,7 +38,7 @@ def main():
         os.environ[name] = "1"
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     results = []
-    for filename in ("FScanpy_Demo.ipynb", "tutorial/predict_sample.ipynb"):
+    for filename in ("FScanpy_Demo.ipynb", "tutorial/predict_sample.ipynb", "tutorial/predict_sample_zh.ipynb"):
         nb = nbformat.read(source / filename, as_version=4)
         nbformat.validate(nb)
         # Verify the actual kernel imports the installed wheel, never the checkout.
