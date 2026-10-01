@@ -68,12 +68,13 @@ def test_public_dataframe_preserves_metadata(regions):
 def test_blastx_pipeline_and_public_exports(predictor):
     blastx = pd.read_excel(get_test_data_path("blastx_example.xlsx"))
     sites = fscanr(blastx, mismatch_cutoff=10, evalue_cutoff=1e-5, frameDist_cutoff=10)
-    assert len(sites) == 16
+    # Correct peptide-coordinate deduplication matches the original R algorithm.
+    assert len(sites) == 11
     extracted = extract_prf_regions(get_test_data_path("mrna_example.fasta"), sites)
-    assert len(extracted) == 16
+    assert len(extracted) == 11
     assert extracted["399bp"].str.len().eq(399).all()
     result = predictor.predict_regions(extracted)
-    assert len(result) == 16
+    assert len(result) == 11
     assert np.isfinite(result["Ensemble_Probability"]).all()
 
 

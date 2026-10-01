@@ -36,7 +36,7 @@ def main():
         os.environ[name] = "1"
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     results = []
-    for filename in ("FScanpy_Demo.ipynb", "tutorial/predict_sample.ipynb"):
+    for filename in ("FScanpy_Demo.ipynb", "tutorial/predict_sample.ipynb", "examples/reusable_plotting.ipynb"):
         nb = nbformat.read(source / filename, as_version=4)
         nbformat.validate(nb)
         # Verify the actual kernel imports the installed wheel, never the checkout.
@@ -48,9 +48,18 @@ def main():
         nb.cells.insert(0, probe)
         if filename == "FScanpy_Demo.ipynb":
             validation = (
-                "assert len(fscanr_results) == len(prf_sequences) == len(fscanr_predictions) == 16\n"
+                "assert len(fscanr_results) == len(prf_sequences) == len(fscanr_predictions) == 11\n"
                 "assert len(validation_predictions) == 3\n"
                 "assert len(sequence_results) == 85\n"
+            )
+        elif filename == "examples/reusable_plotting.ipynb":
+            validation = (
+                "assert len(results) == (len(sequence)-3)//3+1\n"
+                "assert len(full_figure.axes) == len(reused_figure.axes) == 3\n"
+                "assert len(local_figure.axes) == 6\n"
+                "assert sum(len(a.images) for a in local_figure.axes) == 4\n"
+                "assert len(summary) == 2\n"
+                "assert all(any(line.get_color()=='#009E73' for line in axis.lines) for axis in full_figure.axes)\n"
             )
         else:
             validation = (

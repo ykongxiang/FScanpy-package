@@ -224,3 +224,7 @@ If you use FScanpy in your research, please cite:
 
 
 **FScanpy** - Advancing programmed ribosomal frameshifting research through machine learning 🧬
+
+## Reusable plotting
+
+See the [plotting API guide](docs/plotting.md) and [completed plotting notebook](examples/reusable_plotting.ipynb) for thick heatmaps, reference markers and local comparisons using existing prediction tables.

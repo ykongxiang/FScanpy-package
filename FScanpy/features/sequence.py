@@ -46,25 +46,11 @@ class SequenceFeatureExtractor:
         return features
 
     def trim_sequence(self, seq, target_length):
-        """
-        从序列两端等量截取，使其达到目标长度
-        
-        Args:
-            seq: 原始序列
-            target_length: 目标长度
-            
-        Returns:
-            截取后的序列
-        """
+        """Center-crop to exactly target_length, removing an odd extra base on the right."""
         if len(seq) <= target_length:
             return seq
-            
-        # 计算需要从每端截取的长度
-        excess = len(seq) - target_length
-        trim_each_side = excess // 2
-        
-        # 从两端等量截取，保持中心位置不变
-        return seq[trim_each_side:len(seq)-trim_each_side]
+        start = (len(seq) - target_length) // 2
+        return seq[start:start + target_length]
     
     def _preprocess_sequence(self, sequence):
         """
@@ -82,6 +68,7 @@ class SequenceFeatureExtractor:
             if pd.isna(sequence) or not isinstance(sequence, str):
                 sequence = str(sequence)
             sequence = sequence.upper().replace('U', 'T')  # 统一为大写字母
+            sequence = ''.join(base if base in self.valid_bases else 'N' for base in sequence)
 
             # 如果序列长度不等于目标长度，进行截取或填充
             if len(sequence) > self.seq_length:
@@ -163,121 +150,22 @@ class SequenceFeatureExtractor:
             raise ValueError(f"批量特征提取失败: {str(e)}")
     
     def predict_region_batch(self, data: pd.DataFrame, gb_threshold: float = 0.1) -> pd.DataFrame:
+        """Deprecated compatibility wrapper for the public region predictor.
+
+        Uses the central 33 bp of Long_Sequence/399bp through predict_prf;
+        feature extraction itself does not own classification models.
         """
-        批量预测区域序列
-        
-        Args:
-            data: DataFrame包含'33bp'和'399bp'列
-            gb_threshold: GB模型概率阈值（默认为0.1）
-            
-        Returns:
-            DataFrame: 包含预测结果的DataFrame
-        """
-        results = []
-        for idx, row in data.iterrows():
-            try:
-                # 确保序列是字符串
-                seq_33bp = str(row['33bp'])
-                seq = str(row['399bp'])
-                
-                # 确保序列长度正确
-                seq_33bp = self._preprocess_sequence(seq_33bp)
-                seq = self._preprocess_sequence(seq)
-                
-                # 预测
-                result = self.predict_region(seq_33bp, seq, gb_threshold)
-                
-                # 添加原始数据的其他列
-                for col in data.columns:
-                    if col not in ['33bp', '399bp']:
-                        result[col] = row[col]
-                        
-                results.append(result)
-                
-            except Exception as e:
-                print(f"处理索引 {idx} 的序列时出错: {str(e)}")
-                continue
-                
-        return pd.DataFrame(results)
+        import warnings
+        from .. import predict_prf
+        warnings.warn('Use PRFPredictor.predict_regions() or predict_prf(data=...) instead',
+                      DeprecationWarning, stacklevel=2)
+        return predict_prf(data=data, short_threshold=gb_threshold)
 
     def extract_features(self, sequence: str) -> list:
+        """Return the trained feature dimensions after trimming or N-padding the input.
+
+        This shares the preprocessing used by batch feature extraction, including
+        U-to-T normalization. Short inputs are right-padded to ``seq_length``.
+        Feature extraction errors are raised rather than replaced by zero vectors.
         """
-        提取序列特征
-        
-        Args:
-            sequence: DNA序列
-            
-        Returns:
-            list: 特征向量
-        """
-        try:
-            # 确保输入是字符串
-            if not isinstance(sequence, str):
-                sequence = str(sequence)
-            
-            # 大写并替换U为T
-            sequence = sequence.upper().replace('U', 'T')
-            
-            # 如果序列长度不等于目标长度，进行截取
-            if len(sequence) != self.seq_length:
-                sequence = self.trim_sequence(sequence, self.seq_length)
-            
-            # 初始化特征列表
-            features = []
-            
-            try:
-                # 基础特征 (碱基频率)
-                for base in ['A', 'T', 'G', 'C', 'N']:
-                    features.append(sequence.count(base) / len(sequence))
-                
-                # 3-mer特征
-                for kmer in [''.join(p) for p in itertools.product(['A', 'T', 'G', 'C', 'N'], repeat=3)]:
-                    count = 0
-                    for i in range(len(sequence) - 2):
-                        if sequence[i:i+3] == kmer:
-                            count += 1
-                    features.append(count / max(1, len(sequence) - 2))
-                
-                # 密码子特征
-                codons = [''.join(p) for p in itertools.product(['A', 'T', 'G', 'C'], repeat=3)]
-                n_codons = len(sequence) // 3
-                for i in range(n_codons):
-                    pos_start = i * 3
-                    current_codon = sequence[pos_start:pos_start+3]
-                    for codon in codons:
-                        features.append(1 if current_codon == codon and 'N' not in current_codon else 0)
-                
-                # GC含量
-                valid_bases = [b for b in sequence if b != 'N']
-                gc_content = (valid_bases.count('G') + valid_bases.count('C')) / len(valid_bases) if valid_bases else 0
-                features.append(gc_content)
-                
-                # 序列复杂度
-                from collections import Counter
-                valid_counts = Counter(valid_bases)
-                total_valid = sum(valid_counts.values())
-                entropy = 0
-                if total_valid > 0:  # 避免除零错误
-                    for cnt in valid_counts.values():
-                        if cnt > 0:  # 避免log(0)
-                            p = cnt / total_valid
-                            entropy += -p * np.log2(p)
-                    entropy /= np.log2(4) if len(valid_counts) > 0 else 1  # 归一化到0-1，避免除零
-                features.append(entropy)
-                
-                # 确保返回的是一维列表或数组
-                if isinstance(features, np.ndarray) and features.ndim > 1:
-                    features = features.flatten()
-                
-                return features
-            
-            except Exception as e:
-                print(f"特征计算过程出错: {str(e)}")
-                # 如果计算过程出错，返回正确长度的全零特征向量
-                expected_length = 5 + 125 + (len(sequence) // 3) * 64 + 2  # 根据特征提取逻辑计算特征向量长度
-                return [0.0] * expected_length
-                
-        except Exception as e:
-            print(f"特征提取失败: {str(e)}")
-            # 返回一个空列表，调用方需处理这种情况
-            return []
+        return self._preprocess_sequence(sequence)

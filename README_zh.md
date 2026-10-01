@@ -217,3 +217,7 @@ final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)
 ```
 
 **FScanpy** - 通过机器学习推进程序性核糖体移码研究 🧬
+
+## 可复用的绘图功能
+
+[中文绘图 API 指南](docs/plotting_zh.md)及[已执行的绘图 notebook](examples/reusable_plotting.ipynb)介绍粗热图、参考位置标线和局部区域比较，可直接复用已有预测结果；另附[问题检查记录](docs/bug_audit_zh.md)。
