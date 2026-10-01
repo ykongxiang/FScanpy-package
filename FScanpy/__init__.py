@@ -1,7 +1,6 @@
-from .predictor import PRFPredictor
+from .predictor import PRFPredictor, plot_prediction_results, plot_prediction_regions
 from . import data
 from .utils import fscanr, extract_prf_regions
-from .plotting import plot_prediction_results, plot_prediction_regions
 import pandas as pd
 import numpy as np
 from typing import Union, List, Dict

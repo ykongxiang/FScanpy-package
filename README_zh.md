@@ -201,7 +201,7 @@ final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)
 
 - **[完整教程](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/tutorial_zh.md)**：包含示例的综合使用指南
 - **[演示笔记本](https://github.com/ykongxiang/FScanpy-package/blob/master/FScanpy_Demo.ipynb)**：库中每个函数的实际用法以及分析流程结果演示
-- **[预测结果解释](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/predict_sample.ipynb)**：FScanpy 绘图结果的详细解释和信号分析
+- **预测教程**：[中文](tutorial/predict_sample_zh.ipynb) / [English](tutorial/predict_sample.ipynb)，直接使用包内的 `full_seq.xlsx`。
 
 ## 📝 引用
 
@@ -217,9 +217,3 @@ final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)
 ```
 
 **FScanpy** - 通过机器学习推进程序性核糖体移码研究 🧬
-
-## 可复用的绘图功能
-
-[中文绘图 API 指南](docs/plotting_zh.md)及[已执行的绘图 notebook](examples/reusable_plotting.ipynb)介绍粗热图、参考位置标线和局部区域比较，可直接复用已有预测结果；另附[问题检查记录](docs/bug_audit_zh.md)。
-
-新版[中文预测教程](tutorial/predict_sample_zh.ipynb)和[英文教程](tutorial/predict_sample.ipynb)直接使用包内绘图函数与随包的 `predict_sample_examples.csv`，需要 FScanpy 1.0.1 或更新版本。在 notebook 内核中安装相应包后，将 notebook 单独放在任意目录即可运行，无需附带数据目录。另有[中文版旧版已运行参考](tutorial/predict_sample_legacy_zh.ipynb)与[历史保存图归档](tutorial/predict_sample_legacy_saved_zh.ipynb)供对照。

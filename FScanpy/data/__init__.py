@@ -23,7 +23,6 @@ def get_test_data_path(filename: str) -> str:
         >>> mrna_file = get_test_data_path('mrna_example.fasta')
         >>> region_file = get_test_data_path('region_example.csv')
         >>> full_seq_file = get_test_data_path('full_seq.xlsx')
-        >>> tutorial_file = get_test_data_path('predict_sample_examples.csv')
     """
     current_dir = Path(__file__).parent
     test_data_dir = current_dir / "test_data"
@@ -93,7 +92,6 @@ def print_test_data_info():
         print()
         
         file_descriptions = {
-            'predict_sample_examples.csv': '新版预测教程的完整序列与参考坐标',
             'blastx_example.xlsx': '🧬 BLASTX比对结果示例 (1000条记录)',
             'mrna_example.fasta': '🧬 mRNA序列示例数据',
             'region_example.csv': '🎯 PRF区域验证数据 (含标签)',

@@ -39,7 +39,7 @@ def main():
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     results = []
     for filename in ("FScanpy_Demo.ipynb", "tutorial/predict_sample.ipynb",
-                     "tutorial/predict_sample_zh.ipynb", "examples/reusable_plotting.ipynb"):
+                     "tutorial/predict_sample_zh.ipynb"):
         nb = nbformat.read(source / filename, as_version=4)
         nbformat.validate(nb)
         # Verify the actual kernel imports the installed wheel, never the checkout.
@@ -48,7 +48,7 @@ def main():
             f"assert Path({str(source)!r}) not in Path(FScanpy.__file__).resolve().parents\n"
             "assert not Path('data').exists() and not Path('tutorial').exists()\n"
             "from FScanpy.data import get_test_data_path\n"
-            "assert Path(get_test_data_path('predict_sample_examples.csv')).is_relative_to(Path(FScanpy.__file__).resolve().parent)\n"
+            "assert Path(get_test_data_path('full_seq.xlsx')).is_relative_to(Path(FScanpy.__file__).resolve().parent)\n"
             "print('Installed package:', FScanpy.__file__)\nprint('Kernel:', sys.executable)"
         )
         nb.cells.insert(0, probe)
@@ -57,15 +57,6 @@ def main():
                 "assert len(fscanr_results) == len(prf_sequences) == len(fscanr_predictions) == 11\n"
                 "assert len(validation_predictions) == 3\n"
                 "assert len(sequence_results) == 85\n"
-            )
-        elif filename == "examples/reusable_plotting.ipynb":
-            validation = (
-                "assert len(results) == (len(sequence)-3)//3+1\n"
-                "assert len(full_figure.axes) == len(reused_figure.axes) == 3\n"
-                "assert len(local_figure.axes) == 6\n"
-                "assert sum(len(a.images) for a in local_figure.axes) == 4\n"
-                "assert len(summary) == 2\n"
-                "assert all(any(line.get_color()=='#009E73' for line in axis.lines) for axis in full_figure.axes)\n"
             )
         else:
             validation = (
@@ -91,7 +82,7 @@ def main():
                 "np.testing.assert_array_equal(fast.Position, coarse.Position.iloc[::2])\n"
                 "np.testing.assert_allclose(fast[probability_columns], coarse[probability_columns].iloc[::2], atol=5e-4, rtol=0)\n"
                 "assert len(figure.axes) == 12 and sum(len(axis.images) for axis in figure.axes) == 8\n"
-                "assert plot_prediction_regions.__module__ == 'FScanpy.plotting'\n"
+                "assert plot_prediction_regions.__module__ == 'FScanpy.predictor'\n"
             )
         nb.cells.append(nbformat.v4.new_code_cell(validation))
         started = time.monotonic()

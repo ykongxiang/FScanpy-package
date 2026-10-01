@@ -1,3 +1,5 @@
+import math
+from numbers import Integral, Real
 import numpy as np
 import pandas as pd
 from typing import Tuple, Optional
@@ -196,3 +198,15 @@ def prepare_cnn_input(sequence: str) -> np.ndarray:
     base_to_num = {'A': 1, 'T': 2, 'G': 3, 'C': 4, 'N': 0}
     seq_numeric = [base_to_num.get(base, 0) for base in sequence.upper()]
     return np.array(seq_numeric).reshape(1, len(sequence), 1)
+
+
+def probability(value, name):
+    if isinstance(value, bool) or not isinstance(value, Real) or not math.isfinite(value) or not 0 <= value <= 1:
+        raise ValueError(f'{name} must be a finite number between 0 and 1')
+    return float(value)
+
+
+def positive_integer(value, name):
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+        raise ValueError(f'{name} must be a positive integer')
+    return int(value)

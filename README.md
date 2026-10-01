@@ -200,7 +200,7 @@ final_predictions = predict_prf(data=prf_regions, ensemble_weight=0.4)
 
 - **[Complete Tutorial](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/tutorial.md)**: Comprehensive usage guide with examples
 - **[Demo Notebook](https://github.com/ykongxiang/FScanpy-package/blob/master/FScanpy_Demo.ipynb)**: Practical usage of each function in the library and demonstration of analysis workflow results
-- **[Predict Sample Interpretation](https://github.com/ykongxiang/FScanpy-package/blob/master/tutorial/predict_sample.ipynb)**: Detailed interpretation of FScanpy's plotting results and signal analysis
+- **Prediction tutorials**: [English](tutorial/predict_sample.ipynb) / [中文](tutorial/predict_sample_zh.ipynb), using the bundled `full_seq.xlsx`.
 
 ## 📝 Citation
 
@@ -224,9 +224,3 @@ If you use FScanpy in your research, please cite:
 
 
 **FScanpy** - Advancing programmed ribosomal frameshifting research through machine learning 🧬
-
-## Reusable plotting
-
-See the [plotting API guide](docs/plotting.md) and [completed plotting notebook](examples/reusable_plotting.ipynb) for thick heatmaps, reference markers and local comparisons using existing prediction tables.
-
-The updated [English prediction tutorial](tutorial/predict_sample.ipynb) and [Chinese tutorial](tutorial/predict_sample_zh.ipynb) use the package plotting functions and bundled `predict_sample_examples.csv` (FScanpy 1.0.1 or later). After installing the matching package in the notebook kernel, the notebooks can run from any folder without a companion data directory. The [executed legacy reference](tutorial/predict_sample_legacy.ipynb) and [historical saved figures](tutorial/predict_sample_legacy_saved.ipynb) are included for comparison.
