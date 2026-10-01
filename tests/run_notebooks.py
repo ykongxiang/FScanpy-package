@@ -6,6 +6,7 @@ Requires nbclient, nbformat and ipykernel in the current Python environment.
 import argparse
 import json
 import os
+import shutil
 from pathlib import Path
 import sys
 import time
@@ -23,6 +24,7 @@ def main():
     if output == source or source in output.parents:
         parser.error("OUTPUT must be outside the source checkout")
     output.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source / "tutorial" / "data", output / "data", dirs_exist_ok=True)
     kernel_root = output / "jupyter"
     kernel = kernel_root / "kernels" / "fscanpy-validation"
     kernel.mkdir(parents=True, exist_ok=True)
@@ -55,16 +57,29 @@ def main():
         else:
             validation = (
                 "import numpy as np\n"
-                "expected = [(sequence_results0, 366, 0.9935215416815536, 9),\n"
-                "            (sequence_results1, 5266, 0.9946824525879063, 15),\n"
-                "            (sequence_results2, 143, 0.9636074744477399, 105),\n"
-                "            (sequence_results3, 143, 0.9823830742659628, 417),\n"
-                "            (sequence_results4, 363, 0.9933412495767275, 1053)]\n"
-                "for table, count, maximum, position in expected:\n"
+                "expected = {'PRF_0817': (260, 300, 0.963053),\n"
+                "            'PRF_1075': (235, 645, 0.976088),\n"
+                "            'PRF_0837': (141, 249, 0.999480),\n"
+                "            'PRF_1047': (253, 24, 0.997771),\n"
+                "            'PRF_0072': (363, 258, 0.969608)}\n"
+                "assert set(results_by_id) == set(expected)\n"
+                "assert examples['split'].value_counts().to_dict() == {'test': 4, 'train': 1}\n"
+                "for prf_id, (count, position, maximum) in expected.items():\n"
+                "    table = results_by_id[prf_id]\n"
                 "    assert len(table) == count\n"
-                "    assert np.isfinite(table['Ensemble_Probability']).all()\n"
-                "    np.testing.assert_allclose(table['Ensemble_Probability'].max(), maximum, atol=1e-6, rtol=1e-6)\n"
-                "    assert table.loc[table['Ensemble_Probability'].idxmax(), 'Position'] == position\n"
+                "    assert np.isfinite(table[probability_columns]).all().all()\n"
+                "    assert table[probability_columns].ge(0).all().all() and table[probability_columns].le(1).all().all()\n"
+                "    scores = visible_scores(table)\n"
+                "    assert table.loc[scores.idxmax(), 'Position'] == position\n"
+                "    np.testing.assert_allclose(scores.max(), maximum, atol=5e-4, rtol=0)\n"
+                "    axes = figures_by_id[prf_id].axes\n"
+                "    assert len(axes) == 3 and len(axes[0].images) == len(axes[1].images) == 1\n"
+                "    assert axes[0].images[0].get_cmap().name == axes[1].images[0].get_cmap().name == 'Reds'\n"
+                "    np.testing.assert_allclose(axes[0].get_subplotspec().get_gridspec().get_height_ratios(), [0.35,0.35,2.8])\n"
+                "assert len(fine) == 703\n"
+                "assert fine.groupby(fine.Position//3)['Short_Sequence'].nunique().max() == 1\n"
+                "assert fine.groupby(fine.Position//3)['Long_Sequence'].nunique().max() == 1\n"
+                "assert len(figure.axes) == 12 and sum(len(ax.images) for ax in figure.axes) == 8\n"
             )
         nb.cells.append(nbformat.v4.new_code_cell(validation))
         started = time.monotonic()
